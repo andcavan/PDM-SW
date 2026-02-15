@@ -1,0 +1,33 @@
+REPORT CODICE: QQQ_1000-0009
+Generated: 2026-02-09 00:07:17
+
+[ANAGRAFICA]
+Code: QQQ_1000-0009
+Doc type: PART
+State: IN_REV
+Revision: 01
+MMM/GGGG/VVV: QQQ/1000/
+Seq: 0009
+Description: IN MACRO
+OBS previous state: 
+Created at: 2026-02-08T21:57:14
+Updated at: 2026-02-08T23:23:02
+
+[FILE]
+Best model path: C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0009_R01__INREV.sldprt
+Best drawing path: C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0009.slddrw
+Model exists (M): YES
+Drawing exists (D): NO
+MODEL WIP [NO]: 
+MODEL REL [YES]: C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0009.sldprt
+MODEL INREV [YES]: C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0009_R01__INREV.sldprt
+DRW WIP [NO]: C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-0009.slddrw
+DRW REL [NO]: C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0009.slddrw
+DRW INREV [NO]: 
+
+[CUSTOM VALUES]
+(none)
+
+[STATE NOTES]
+2026-02-08 23:23:02 | CREATE_REV | REL->IN_REV | REV 01->01
+in rev da me

@@ -1,0 +1,37 @@
+REPORT CODICE: SSS_0100-0002
+Generated: 2026-02-11 18:05:34
+
+[ANAGRAFICA]
+Code: SSS_0100-0002
+Doc type: PART
+State: WIP
+Revision: 00
+MMM/GGGG/VVV: SSS/0100/
+Seq: 0002
+Description: NOVO DOCUMENTO PROVA WORKFLOW
+OBS previous state: 
+Created at: 2026-02-11T17:57:03
+Updated at: 2026-02-11T17:57:03
+
+[FILE]
+Best model path: C:\ArchivioCAD\SSS\0100\wip\SSS_0100-0002.sldprt
+Best drawing path: C:\ArchivioCAD\SSS\0100\wip\SSS_0100-0002.slddrw
+Model exists (M): YES
+Drawing exists (D): YES
+MODEL WIP [YES]: C:\ArchivioCAD\SSS\0100\wip\SSS_0100-0002.sldprt
+MODEL REL [NO]: 
+MODEL INREV [NO]: 
+DRW WIP [YES]: C:\ArchivioCAD\SSS\0100\wip\SSS_0100-0002.slddrw
+DRW REL [NO]: 
+DRW INREV [NO]: 
+
+[CUSTOM VALUES]
+AUTORE = Andrea Cavani
+DATA = 
+FINITURA = 
+MASSA = 0.00
+MATERIALE = 
+TRATTAMENTOTERMICO = 
+
+[STATE NOTES]
+(none)

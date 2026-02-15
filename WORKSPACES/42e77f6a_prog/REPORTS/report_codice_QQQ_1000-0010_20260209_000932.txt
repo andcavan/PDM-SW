@@ -1,0 +1,41 @@
+REPORT CODICE: QQQ_1000-0010
+Generated: 2026-02-09 00:09:32
+
+[ANAGRAFICA]
+Code: QQQ_1000-0010
+Doc type: PART
+State: IN_REV
+Revision: 00
+MMM/GGGG/VVV: QQQ/1000/
+Seq: 0010
+Description: ASSIEME
+OBS previous state: 
+Created at: 2026-02-08T23:04:21
+Updated at: 2026-02-08T23:40:18
+
+[FILE]
+Best model path: C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0010_R00__INREV.sldprt
+Best drawing path: C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0010_R00__INREV.slddrw
+Model exists (M): YES
+Drawing exists (D): YES
+MODEL WIP [NO]: 
+MODEL REL [YES]: C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0010.sldprt
+MODEL INREV [YES]: C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0010_R00__INREV.sldprt
+DRW WIP [NO]: 
+DRW REL [YES]: C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0010.slddrw
+DRW INREV [YES]: C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0010_R00__INREV.slddrw
+
+[CUSTOM VALUES]
+AUTORE = Andrea Cavani
+DATA = 
+FINITURA = 
+MASSA = 0.00
+MATERIALE = 
+TRATTAMENTOTERMICO = 
+
+[STATE NOTES]
+2026-02-08 23:40:18 | CREATE_REV | REL->IN_REV | REV 00->00
+da rel a in rev
+
+2026-02-08 23:34:06 | RELEASE | WIP->REL | REV 00->00
+da wip a rel

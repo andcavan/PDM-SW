@@ -1,0 +1,3 @@
+created_at,event_type,from_state,to_state,rev_before,rev_after,note
+2026-02-08T23:40:18,CREATE_REV,REL,IN_REV,0,0,da rel a in rev
+2026-02-08T23:34:06,RELEASE,WIP,REL,0,0,da wip a rel

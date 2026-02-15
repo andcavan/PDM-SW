@@ -1,0 +1,20 @@
+{
+  "workspaces": {
+    "42e77f6a": {
+      "id": "42e77f6a",
+      "name": "prog",
+      "description": "prog",
+      "path": "42e77f6a_prog",
+      "created_at": "2026-02-07T22:00:31",
+      "updated_at": "2026-02-07T22:00:31"
+    },
+    "9a5aa5c7": {
+      "id": "9a5aa5c7",
+      "name": "PROG3DAC",
+      "description": "MY-WORKSPACE",
+      "path": "9a5aa5c7_PROG3DAC",
+      "created_at": "2026-02-11T18:39:35",
+      "updated_at": "2026-02-11T18:39:35"
+    }
+  }
+}

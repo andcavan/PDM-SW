@@ -1,0 +1,141 @@
+{
+  "code": {
+    "sep1": "_",
+    "sep2": "-",
+    "sep3": "-",
+    "include_vvv_by_default": false,
+    "vvv_presets": [
+      "V01",
+      "V02",
+      "V03",
+      "V04",
+      "V05",
+      "SKL",
+      "FTM"
+    ],
+    "segments": {
+      "MMM": {
+        "enabled": true,
+        "length": 3,
+        "charset": "ALPHA",
+        "case": "UPPER"
+      },
+      "GGGG": {
+        "enabled": true,
+        "length": 4,
+        "charset": "NUM",
+        "case": "UPPER"
+      },
+      "0000": {
+        "enabled": true,
+        "length": 4,
+        "charset": "NUM",
+        "case": "UPPER"
+      },
+      "VVV": {
+        "enabled": true,
+        "length": 3,
+        "charset": "ALNUM",
+        "case": "UPPER"
+      }
+    }
+  },
+  "solidworks": {
+    "archive_root": "C:/ArchivioCAD",
+    "template_part": "K://Config_Cad/SW2025-cfg/templates/ParteMy.prtdot",
+    "template_assembly": "K://Config_Cad/SW2025-cfg/templates/AssiemeMy.asmdot",
+    "template_drawing": "K://Config_Cad/SW2025-cfg/templates/DisegnoMy.DRWDOT",
+    "property_map": {
+      "code": "Numero Parte",
+      "revision": "Revision",
+      "state": "STATO",
+      "doc_type": "TIPO_DOC",
+      "mmm": "MACCHINA",
+      "gggg": "GRUPPO",
+      "vvv": "VARIANTE"
+    },
+    "property_mappings": [
+      {
+        "pdm_field": "code",
+        "sw_prop": "Numero Parte"
+      },
+      {
+        "pdm_field": "revision",
+        "sw_prop": "Revision"
+      },
+      {
+        "pdm_field": "state",
+        "sw_prop": "STATO"
+      },
+      {
+        "pdm_field": "doc_type",
+        "sw_prop": "TIPO_DOC"
+      },
+      {
+        "pdm_field": "mmm",
+        "sw_prop": "MACCHINA"
+      },
+      {
+        "pdm_field": "gggg",
+        "sw_prop": "GRUPPO"
+      },
+      {
+        "pdm_field": "vvv",
+        "sw_prop": "VARIANTE"
+      }
+    ],
+    "description_prop": "Descrizione",
+    "read_properties": [
+      "FINITURA",
+      "TRATTAMENTOTERMICO",
+      "MATERIALE",
+      "MASSA",
+      "DATA",
+      "AUTORE"
+    ]
+  },
+  "pdm": {
+    "custom_properties": [
+      {
+        "name": "MATERIALE",
+        "type": "TEXT",
+        "required": false,
+        "default": "",
+        "options": ""
+      },
+      {
+        "name": "TRATTAMENTO_TERMICO",
+        "type": "TEXT",
+        "required": false,
+        "default": "",
+        "options": ""
+      },
+      {
+        "name": "TRATTAMENTO_SUPERFICIALE",
+        "type": "TEXT",
+        "required": false,
+        "default": "",
+        "options": ""
+      },
+      {
+        "name": "PESO",
+        "type": "TEXT",
+        "required": false,
+        "default": "",
+        "options": ""
+      },
+      {
+        "name": "AUTORE",
+        "type": "TEXT",
+        "required": false,
+        "default": "",
+        "options": ""
+      }
+    ]
+  },
+  "backup": {
+    "enabled": true,
+    "retention_total": 30,
+    "daily_enabled": true
+  }
+}

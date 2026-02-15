@@ -1,0 +1,500 @@
+==== START 07/02/2026 23:47:29,60 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 885, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 193, in __init__
+    self._build_ui()
+    ~~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 212, in _build_ui
+    self._ui_codifica()
+    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2566, in __getattr__
+    return getattr(self.tk, attr)
+AttributeError: '_tkinter.tkapp' object has no attribute '_ui_codifica'
+==== EXIT 1 07/02/2026 23:47:30,01 ====
+==== START 07/02/2026 23:47:39,85 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 885, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 193, in __init__
+    self._build_ui()
+    ~~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 212, in _build_ui
+    self._ui_codifica()
+    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2566, in __getattr__
+    return getattr(self.tk, attr)
+AttributeError: '_tkinter.tkapp' object has no attribute '_ui_codifica'
+==== EXIT 1 07/02/2026 23:47:40,15 ====
+==== START 07/02/2026 23:52:20,11 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 885, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 193, in __init__
+    self._build_ui()
+    ~~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 212, in _build_ui
+    self._ui_codifica()
+    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2566, in __getattr__
+    return getattr(self.tk, attr)
+AttributeError: '_tkinter.tkapp' object has no attribute '_ui_codifica'
+==== EXIT 1 07/02/2026 23:52:20,44 ====
+==== START 07/02/2026 23:52:20,71 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 885, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 193, in __init__
+    self._build_ui()
+    ~~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 212, in _build_ui
+    self._ui_codifica()
+    ^^^^^^^^^^^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2566, in __getattr__
+    return getattr(self.tk, attr)
+AttributeError: '_tkinter.tkapp' object has no attribute '_ui_codifica'
+==== EXIT 1 07/02/2026 23:52:21,04 ====
+==== START 08/02/2026  0:29:26,97 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 771, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 245, in __init__
+    self.cfg_mgr = ConfigManager(self.ws_mgr.resolve_ws_dir(self.ws) / "config.json")
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WorkspaceManager' object has no attribute 'resolve_ws_dir'
+==== EXIT 1 08/02/2026  0:29:27,29 ====
+==== START 08/02/2026  0:33:44,03 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 771, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 245, in __init__
+    self.cfg_mgr = ConfigManager(self.ws_mgr.resolve_ws_dir(self.ws) / "config.json")
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WorkspaceManager' object has no attribute 'resolve_ws_dir'
+==== EXIT 1 08/02/2026  0:33:44,30 ====
+==== START 08/02/2026  0:33:45,31 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 771, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 245, in __init__
+    self.cfg_mgr = ConfigManager(self.ws_mgr.resolve_ws_dir(self.ws) / "config.json")
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WorkspaceManager' object has no attribute 'resolve_ws_dir'
+==== EXIT 1 08/02/2026  0:33:45,56 ====
+==== START 08/02/2026  0:44:54,69 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 777, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 245, in __init__
+    self.cfg_mgr = ConfigManager(self.ws_mgr.resolve_ws_dir(self.ws) / "config.json")
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WorkspaceManager' object has no attribute 'resolve_ws_dir'
+==== EXIT 1 08/02/2026  0:44:55,02 ====
+==== START 08/02/2026  0:45:32,11 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 777, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 245, in __init__
+    self.cfg_mgr = ConfigManager(self.ws_mgr.resolve_ws_dir(self.ws) / "config.json")
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WorkspaceManager' object has no attribute 'resolve_ws_dir'
+==== EXIT 1 08/02/2026  0:45:32,39 ====
+==== START 08/02/2026  1:02:38,90 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 773, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 257, in __init__
+    self.code_var = tk.StringVar(value=_code_from_path(self.active_doc_path))
+                                       ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 178, in _code_from_path
+    stem = _re.sub(r"_R\d{2}__INREV$", "", stem, flags=_re.I)
+           ^^^
+NameError: name '_re' is not defined
+==== EXIT 1 08/02/2026  1:02:39,21 ====
+==== START 08/02/2026  1:09:49,17 ====
+Traceback (most recent call last):
+  File "C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.py", line 26, in <module>
+    main()
+    ~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 774, in main
+    app = MacroUI(pdm_root=pdm_root, ws_id=ns.workspace, sw_context=sw_context)
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 267, in __init__
+    self._build_ui()
+    ~~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 293, in _build_ui
+    self._ui_workflow()
+    ~~~~~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 626, in _ui_workflow
+    self.btn_inrev_cancel.pack(in_=row2, side="left", padx=6, pady=6)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\core_widget_classes\ctk_base_class.py", line 298, in pack
+    return super().pack(**self._apply_argument_scaling(kwargs))
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2616, in pack_configure
+    self.tk.call(
+    ~~~~~~~~~~~~^
+          ('pack', 'configure', self._w)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          + self._options(cnf, kw))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: can't pack .!ctktabview.!ctkframe2.!ctkframe.!ctkframe2.!ctkbutton4 inside .!ctktabview.!ctkframe2.!ctkframe.!ctkframe3
+==== EXIT 1 08/02/2026  1:09:49,56 ====
+==== START 08/02/2026  1:29:48,46 ====
+==== EXIT 0 08/02/2026  1:29:59,17 ====
+==== START 08/02/2026  1:30:12,33 ====
+==== EXIT 0 08/02/2026  1:30:19,81 ====
+==== START 08/02/2026  1:30:44,87 ====
+==== EXIT 0 08/02/2026  1:31:26,40 ====
+==== START 08/02/2026  1:31:34,53 ====
+==== EXIT 0 08/02/2026  1:32:54,42 ====
+==== START 08/02/2026  1:33:15,74 ====
+==== EXIT 0 08/02/2026  1:33:25,09 ====
+==== START 08/02/2026  1:33:36,95 ====
+==== EXIT 0 08/02/2026  1:34:13,07 ====
+==== START 08/02/2026  1:36:19,19 ====
+==== EXIT 0 08/02/2026  1:37:00,30 ====
+==== START 08/02/2026  9:31:39,29 ====
+==== EXIT 0 08/02/2026  9:32:34,40 ====
+==== START 08/02/2026  9:32:45,60 ====
+==== EXIT 0 08/02/2026  9:35:20,67 ====
+==== START 08/02/2026  9:35:44,20 ====
+==== EXIT 0 08/02/2026  9:42:25,94 ====
+==== START 08/02/2026  9:42:28,57 ====
+==== EXIT 0 08/02/2026  9:43:04,52 ====
+==== START 08/02/2026  9:49:27,50 ====
+==== EXIT 0 08/02/2026  9:49:33,62 ====
+==== START 08/02/2026  9:50:05,14 ====
+==== EXIT 0 08/02/2026  9:50:49,29 ====
+==== START 08/02/2026  9:51:08,66 ====
+==== EXIT 0 08/02/2026  9:53:05,82 ====
+==== START 08/02/2026  9:53:08,71 ====
+==== EXIT 0 08/02/2026  9:53:32,30 ====
+==== START 08/02/2026  9:53:34,80 ====
+==== EXIT 0 08/02/2026  9:53:41,69 ====
+==== START 08/02/2026 10:12:01,26 ====
+==== EXIT 0 08/02/2026 10:13:00,68 ====
+==== START 08/02/2026 10:13:02,42 ====
+==== EXIT 0 08/02/2026 10:14:02,34 ====
+==== START 08/02/2026 10:14:06,57 ====
+==== EXIT 0 08/02/2026 10:14:22,04 ====
+==== START 08/02/2026 10:38:02,55 ====
+==== EXIT 0 08/02/2026 10:38:18,49 ====
+==== START 08/02/2026 10:38:25,75 ====
+==== EXIT 0 08/02/2026 10:38:39,47 ====
+==== START 08/02/2026 16:52:06,40 ====
+C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe: can't open file 'C:\\PDM-SW\\\\SW_CACHE\\\\42e77f6a\\\\payloadPDM_SW_PAYLOAD.py': [Errno 2] No such file or directory
+==== EXIT 2 08/02/2026 16:52:06,45 ====
+==== START 08/02/2026 16:52:14,97 ====
+C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe: can't open file 'C:\\PDM-SW\\\\SW_CACHE\\\\42e77f6a\\\\payloadPDM_SW_PAYLOAD.py': [Errno 2] No such file or directory
+==== EXIT 2 08/02/2026 16:52:15,01 ====
+==== START 08/02/2026 16:53:22,38 ====
+C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe: can't open file 'C:\\PDM-SW\\\\SW_CACHE\\\\42e77f6a\\\\payloadPDM_SW_PAYLOAD.py': [Errno 2] No such file or directory
+==== EXIT 2 08/02/2026 16:53:22,42 ====
+==== START 08/02/2026 16:53:32,30 ====
+C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe: can't open file 'C:\\PDM-SW\\\\SW_CACHE\\\\42e77f6a\\\\payloadPDM_SW_PAYLOAD.py': [Errno 2] No such file or directory
+==== EXIT 2 08/02/2026 16:53:32,34 ====
+==== START 08/02/2026 17:18:43,87 ====
+C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe: can't open file 'C:\\PDM-SW\\\\SW_CACHE\\\\42e77f6a\\\\payloadPDM_SW_PAYLOAD.py': [Errno 2] No such file or directory
+==== EXIT 2 08/02/2026 17:18:43,91 ====
+==== START 08/02/2026 17:23:13,97 ====
+C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe: can't open file 'C:\\PDM-SW\\\\SW_CACHE\\\\42e77f6a\\\\payloadPDM_SW_PAYLOAD.py': [Errno 2] No such file or directory
+==== EXIT 2 08/02/2026 17:23:14,00 ====
+==== START 08/02/2026 17:23:15,64 ====
+C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe: can't open file 'C:\\PDM-SW\\\\SW_CACHE\\\\42e77f6a\\\\payloadPDM_SW_PAYLOAD.py': [Errno 2] No such file or directory
+==== EXIT 2 08/02/2026 17:23:15,68 ====
+==== START 08/02/2026 17:38:35,65 ====
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+==== EXIT 0 08/02/2026 17:40:13,40 ====
+==== START 08/02/2026 17:40:26,09 ====
+==== EXIT 0 08/02/2026 17:41:08,65 ====
+==== START 08/02/2026 17:41:12,49 ====
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+==== EXIT 0 08/02/2026 17:41:58,91 ====
+==== START 08/02/2026 17:42:14,43 ====
+==== EXIT 0 08/02/2026 17:42:34,90 ====
+==== START 08/02/2026 17:42:54,16 ====
+==== EXIT 0 08/02/2026 17:44:42,76 ====
+==== START 08/02/2026 17:48:39,88 ====
+==== EXIT 0 08/02/2026 17:53:36,52 ====
+==== START 08/02/2026 18:18:41,82 ====
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+==== EXIT 0 08/02/2026 18:19:34,10 ====
+==== START 08/02/2026 21:16:34,66 ====
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+==== EXIT 0 08/02/2026 21:16:54,28 ====
+==== START 08/02/2026 21:17:03,03 ====
+==== EXIT 0 08/02/2026 21:19:40,21 ====
+==== START 08/02/2026 21:19:48,07 ====
+==== EXIT 0 08/02/2026 21:21:10,01 ====
+==== START 08/02/2026 21:21:14,99 ====
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+==== EXIT 0 08/02/2026 21:21:59,23 ====
+==== START 08/02/2026 21:22:41,19 ====
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 584, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+==== EXIT 0 08/02/2026 21:22:52,26 ====
+==== START 08/02/2026 21:39:10,01 ====
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 596, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 596, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 596, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\tkinter\__init__.py", line 2088, in __call__
+    return self.func(*args)
+           ~~~~~~~~~^^^^^^^
+  File "C:\Users\prog3\AppData\Local\Programs\Python\Python314\Lib\site-packages\customtkinter\windows\widgets\ctk_button.py", line 554, in _clicked
+    self._command()
+    ~~~~~~~~~~~~~^^
+  File "C:\PDM-SW\pdm_sw\macro_runtime.py", line 596, in _create_code_and_save_wip
+    mmm_n = self.cfg.code.mmm.normalize_value(mmm)
+            ^^^^^^^^^^^^^^^^^
+AttributeError: 'CodeConfig' object has no attribute 'mmm'
+==== EXIT 0 08/02/2026 21:40:44,90 ====
+==== START 08/02/2026 21:41:21,88 ====
+==== EXIT 0 08/02/2026 21:42:33,83 ====
+==== START 08/02/2026 21:44:48,75 ====
+==== EXIT 0 08/02/2026 21:45:21,65 ====
+==== START 08/02/2026 21:45:52,50 ====
+==== EXIT 0 08/02/2026 21:46:13,99 ====
+==== START 08/02/2026 21:56:26,68 ====
+==== EXIT 0 08/02/2026 21:59:09,18 ====
+==== START 08/02/2026 23:35:59,30 ====
+==== EXIT 0 08/02/2026 23:36:18,66 ====
+==== START 08/02/2026 23:39:57,47 ====
+==== EXIT 0 08/02/2026 23:40:21,88 ====
+==== START 09/02/2026  0:20:45,82 ====
+==== EXIT 0 09/02/2026  0:20:58,02 ====
+==== START 11/02/2026 17:49:24,58 ====
+==== EXIT 0 11/02/2026 17:50:45,80 ====
+==== START 11/02/2026 17:51:50,74 ====
+==== EXIT 0 11/02/2026 17:51:59,86 ====
+==== START 11/02/2026 19:22:41,50 ====
+==== EXIT 0 11/02/2026 19:28:01,41 ====
+==== START 11/02/2026 19:28:04,96 ====
+==== EXIT 0 11/02/2026 19:28:55,96 ====
+==== START 11/02/2026 19:30:54,91 ====
+==== EXIT 0 11/02/2026 19:32:32,90 ====
