@@ -47,3 +47,15 @@
 2026-02-17 17:58:37 | FS MOVE START | C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0009_R01__INREV.sldprt -> C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0009.sldprt | overwrite=True
 2026-02-17 17:58:37 | FS MOVE OK (rename) | C:\ArchivioCAD\QQQ\1000\inrev\QQQ_1000-0009_R01__INREV.sldprt -> C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0009.sldprt
 2026-02-17 17:58:37 | WF OK APPROVE_INREV | code=QQQ_1000-0009 | new_state=REL | rev=02
+2026-02-17 22:35:50 | WF START RELEASE | code=QQQ_1000-9995 | state=WIP | rev=00
+2026-02-17 22:35:50 | FS MOVE START | C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-9995.sldasm -> C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-9995.sldasm | overwrite=True
+2026-02-17 22:35:50 | FS MOVE OK (rename) | C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-9995.sldasm -> C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-9995.sldasm
+2026-02-17 22:35:50 | FS MOVE START | C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-9995.slddrw -> C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-9995.slddrw | overwrite=True
+2026-02-17 22:35:50 | FS MOVE OK (rename) | C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-9995.slddrw -> C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-9995.slddrw
+2026-02-17 22:35:50 | WF OK RELEASE | code=QQQ_1000-9995 | new_state=REL | rev=00
+2026-02-17 23:36:28 | WF START RELEASE | code=SSS_1000-0002 | state=WIP | rev=00
+2026-02-17 23:36:28 | FS MOVE START | C:\ArchivioCAD\SSS\1000\wip\SSS_1000-0002.sldprt -> C:\ArchivioCAD\SSS\1000\rel\SSS_1000-0002.sldprt | overwrite=True
+2026-02-17 23:36:28 | FS MOVE OK (rename) | C:\ArchivioCAD\SSS\1000\wip\SSS_1000-0002.sldprt -> C:\ArchivioCAD\SSS\1000\rel\SSS_1000-0002.sldprt
+2026-02-17 23:36:28 | FS MOVE START | C:\ArchivioCAD\SSS\1000\wip\SSS_1000-0002.slddrw -> C:\ArchivioCAD\SSS\1000\rel\SSS_1000-0002.slddrw | overwrite=True
+2026-02-17 23:36:28 | FS MOVE OK (rename) | C:\ArchivioCAD\SSS\1000\wip\SSS_1000-0002.slddrw -> C:\ArchivioCAD\SSS\1000\rel\SSS_1000-0002.slddrw
+2026-02-17 23:36:28 | WF OK RELEASE | code=SSS_1000-0002 | new_state=REL | rev=00

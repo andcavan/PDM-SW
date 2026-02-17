@@ -55,6 +55,7 @@ from .sw_api import (
     save_existing_doc,
     open_doc,
     close_doc,
+    create_model_file,
     create_drawing_file,
     save_as_doc,
 )
@@ -283,6 +284,12 @@ if ctk is not None:
             self.desc_var = tk.StringVar(value="")
 
             self.doc_type = self._detect_doc_type_from_path(self.active_doc_path)
+            
+            # Nuove variabili per tab codifica allineata a PDM
+            self.doc_type_var = tk.StringVar(value=self.doc_type if self.doc_type in ("MACHINE", "GROUP", "PART", "ASSY") else "PART")
+            self.file_mode_var = tk.StringVar(value="code_only")  # code_only, model, model_drw
+            self.link_file_var = tk.StringVar(value="")
+            self.link_auto_drw_var = tk.BooleanVar(value=True)
 
             self._build_ui()
             _handler = getattr(self, "_on_close", None)
@@ -475,53 +482,86 @@ if ctk is not None:
             frm = ctk.CTkFrame(tab)
             frm.pack(fill="both", expand=True, padx=12, pady=12)
 
-            # Riga selezioni
-            row1 = ctk.CTkFrame(frm)
-            row1.pack(fill="x", pady=(10, 6), padx=10)
+            # --- TIPO DOCUMENTO ---
+            type_frame = ctk.CTkFrame(frm)
+            type_frame.pack(fill="x", pady=(0, 10))
+            ctk.CTkLabel(type_frame, text="TIPO DOCUMENTO", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=8, pady=6)
+            
+            radio_frame = ctk.CTkFrame(type_frame, fg_color="transparent")
+            radio_frame.pack(fill="x", padx=8, pady=4)
+            
+            ctk.CTkRadioButton(radio_frame, text="Macchina (MMM-V####) → crea ASM", variable=self.doc_type_var, value="MACHINE", command=self._on_doc_type_change).pack(anchor="w", pady=2)
+            ctk.CTkRadioButton(radio_frame, text="Gruppo (MMM_GGGG-V####) → crea ASM", variable=self.doc_type_var, value="GROUP", command=self._on_doc_type_change).pack(anchor="w", pady=2)
+            ctk.CTkRadioButton(radio_frame, text="Parte (MMM_GGGG-0001) → crea PRT", variable=self.doc_type_var, value="PART", command=self._on_doc_type_change).pack(anchor="w", pady=2)
+            ctk.CTkRadioButton(radio_frame, text="Assieme (MMM_GGGG-9999) → crea ASM", variable=self.doc_type_var, value="ASSY", command=self._on_doc_type_change).pack(anchor="w", pady=2)
 
-            ctk.CTkLabel(row1, text="Macchina (MMM):", width=120, anchor="w").pack(side="left")
-            self.cb_mmm = ctk.CTkComboBox(row1, variable=self.mmm_var, values=[], command=lambda _=None: self._on_mmm_changed(), width=220)
-            self.cb_mmm.pack(side="left", padx=(0, 12))
+            # --- PARAMETRI ---
+            params_frame = ctk.CTkFrame(frm)
+            params_frame.pack(fill="x", pady=(0, 10))
+            
+            params_grid = ctk.CTkFrame(params_frame, fg_color="transparent")
+            params_grid.pack(fill="x", padx=8, pady=8)
+            
+            ctk.CTkLabel(params_grid, text="MMM").grid(row=0, column=0, padx=6, pady=6, sticky="w")
+            self.cb_mmm = ctk.CTkComboBox(params_grid, variable=self.mmm_var, values=[], command=lambda _: self._on_mmm_changed(), width=140)
+            self.cb_mmm.grid(row=0, column=1, padx=6, pady=6, sticky="w")
+            
+            ctk.CTkLabel(params_grid, text="GGGG").grid(row=0, column=2, padx=6, pady=6, sticky="w")
+            self.cb_gggg = ctk.CTkComboBox(params_grid, variable=self.gggg_var, values=[], command=lambda _: self._refresh_preview(), width=140)
+            self.cb_gggg.grid(row=0, column=3, padx=6, pady=6, sticky="w")
+            
+            self.chk_use_vvv = ctk.CTkCheckBox(params_grid, text="Variante", variable=self.use_vvv_var, command=self._refresh_preview)
+            self.chk_use_vvv.grid(row=0, column=4, padx=6, pady=6, sticky="w")
+            
+            vvv_vals = list(self.cfg.code.vvv_presets or ["V01"])
+            self.cb_vvv = ctk.CTkComboBox(params_grid, variable=self.vvv_var, values=vvv_vals, command=lambda _: self._refresh_preview(), width=120)
+            self.cb_vvv.grid(row=0, column=5, padx=6, pady=6, sticky="w")
+            
+            ctk.CTkLabel(params_grid, text="Descrizione").grid(row=1, column=0, padx=6, pady=6, sticky="w")
+            self.ent_desc = ctk.CTkEntry(params_grid, textvariable=self.desc_var, width=500)
+            self.ent_desc.grid(row=1, column=1, columnspan=5, padx=6, pady=6, sticky="ew")
+            
+            params_grid.grid_columnconfigure(5, weight=1)
 
-            ctk.CTkLabel(row1, text="Gruppo (GGGG):", width=120, anchor="w").pack(side="left")
-            self.cb_gggg = ctk.CTkComboBox(row1, variable=self.gggg_var, values=[], command=lambda _=None: self._refresh_preview(), width=220)
-            self.cb_gggg.pack(side="left", padx=(0, 12))
+            # --- FILE ESISTENTE (opzionale) ---
+            link_frame = ctk.CTkFrame(params_frame, fg_color="transparent")
+            link_frame.pack(fill="x", padx=8, pady=(0, 8))
+            ctk.CTkLabel(link_frame, text="File esistente (opz)").pack(side="left", padx=6)
+            self.ent_link = ctk.CTkEntry(link_frame, textvariable=self.link_file_var, width=300)
+            self.ent_link.pack(side="left", padx=6)
+            ctk.CTkButton(link_frame, text="Sfoglia", width=90, command=self._browse_link_file).pack(side="left", padx=4)
+            ctk.CTkButton(link_frame, text="Pulisci", width=80, command=self._clear_link_file).pack(side="left", padx=4)
+            ctk.CTkCheckBox(link_frame, text="Importa anche DRW", variable=self.link_auto_drw_var).pack(side="left", padx=12)
 
-            ctk.CTkLabel(row1, text="Tipo:", width=50, anchor="w").pack(side="left")
-            self.lbl_type = ctk.CTkLabel(row1, text=self._doc_type_label(self.doc_type), width=60, anchor="w")
-            self.lbl_type.pack(side="left", padx=(0, 10))
+            # --- CREAZIONE FILE SOLIDWORKS ---
+            file_frame = ctk.CTkFrame(frm)
+            file_frame.pack(fill="x", pady=(0, 10))
+            ctk.CTkLabel(file_frame, text="CREAZIONE FILE SOLIDWORKS", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=8, pady=6)
+            
+            file_radio_frame = ctk.CTkFrame(file_frame, fg_color="transparent")
+            file_radio_frame.pack(fill="x", padx=8, pady=4)
+            
+            ctk.CTkRadioButton(file_radio_frame, text="Solo codice (no file)", variable=self.file_mode_var, value="code_only").pack(anchor="w", pady=2)
+            ctk.CTkRadioButton(file_radio_frame, text="Modello (PRT/ASM automatico)", variable=self.file_mode_var, value="model").pack(anchor="w", pady=2)
+            ctk.CTkRadioButton(file_radio_frame, text="Modello + Disegno", variable=self.file_mode_var, value="model_drw").pack(anchor="w", pady=2)
 
-            row2 = ctk.CTkFrame(frm)
-            row2.pack(fill="x", pady=(0, 8), padx=10)
+            # --- AZIONI ---
+            actions_frame = ctk.CTkFrame(frm)
+            actions_frame.pack(fill="x", pady=(10, 0))
+            
+            left_actions = ctk.CTkFrame(actions_frame, fg_color="transparent")
+            left_actions.pack(side="left", padx=8, pady=8)
+            ctk.CTkButton(left_actions, text="PROSSIMO CODICE", width=160, command=self._show_next_code).pack(side="left", padx=6)
+            
+            self.lbl_preview = ctk.CTkLabel(left_actions, text="", font=ctk.CTkFont(size=16, weight="bold"), text_color="#2E7D32")
+            self.lbl_preview.pack(side="left", padx=12)
+            
+            right_actions = ctk.CTkFrame(actions_frame, fg_color="transparent")
+            right_actions.pack(side="right", padx=8, pady=8)
+            ctk.CTkButton(right_actions, text="GENERA", width=180, height=40, font=ctk.CTkFont(size=16, weight="bold"), fg_color="#27AE60", hover_color="#229954", command=self._generate_document).pack()
 
-            self.chk_use_vvv = ctk.CTkCheckBox(row2, text="Usa VVV", variable=self.use_vvv_var, command=self._refresh_preview)
-            self.chk_use_vvv.pack(side="left", padx=(0, 10))
-
-            ctk.CTkLabel(row2, text="Variante (VVV):", width=120, anchor="w").pack(side="left")
-            vvv_vals = list(self.cfg.code.vvv_presets or [])
-            if self.vvv_var.get() and self.vvv_var.get() not in vvv_vals:
-                vvv_vals.insert(0, self.vvv_var.get())
-            self.cb_vvv = ctk.CTkComboBox(row2, variable=self.vvv_var, values=vvv_vals, command=lambda _=None: self._refresh_preview(), width=220)
-            self.cb_vvv.pack(side="left", padx=(0, 12))
-
-            row3 = ctk.CTkFrame(frm)
-            row3.pack(fill="x", pady=(0, 8), padx=10)
-            ctk.CTkLabel(row3, text="Descrizione:", width=120, anchor="w").pack(side="left")
-            self.ent_desc = ctk.CTkEntry(row3, textvariable=self.desc_var)
-            self.ent_desc.pack(side="left", fill="x", expand=True, padx=(0, 12))
-
-            self.lbl_preview = ctk.CTkLabel(frm, text="Prossimo codice: —", font=ctk.CTkFont(size=14, weight="bold"))
-            self.lbl_preview.pack(anchor="w", padx=12, pady=(8, 8))
-
-            btns = ctk.CTkFrame(frm)
-            btns.pack(fill="x", padx=10, pady=(0, 10))
-
-            ctk.CTkButton(btns, text="AGGIORNA PROSSIMO CODICE", command=self._refresh_preview, width=220).pack(side="left", padx=6)
-            ctk.CTkButton(btns, text="CREA CODICE + SALVA IN WIP", command=self._create_code_and_save_wip, width=220).pack(side="left", padx=6)
-            ctk.CTkButton(btns, text="COPIA DOCUMENTO ATTIVO", command=self._copy_active_doc_and_save_wip, width=220).pack(side="left", padx=6)
-
-            note = "Nota: la macro crea o copia il documento attivo in WIP con nuovo codice."
-            ctk.CTkLabel(frm, text=note, font=ctk.CTkFont(size=11)).pack(anchor="w", padx=12, pady=(0, 10))
+            self._on_doc_type_change()
+            self._refresh_preview()
 
         def _refresh_machines(self):
             try:
@@ -563,526 +603,355 @@ if ctk is not None:
 
             self._refresh_preview()
 
+        def _on_doc_type_change(self):
+            """Abilita/disabilita controlli in base al tipo documento selezionato."""
+            doc_type = self.doc_type_var.get()
+            
+            if doc_type == "MACHINE":
+                # Disabilita GGGG e variante
+                self.cb_gggg.configure(state="disabled")
+                self.chk_use_vvv.configure(state="disabled")
+                self.cb_vvv.configure(state="disabled")
+            elif doc_type == "GROUP":
+                # Abilita GGGG, disabilita variante
+                self.cb_gggg.configure(state="normal")
+                self.chk_use_vvv.configure(state="disabled")
+                self.cb_vvv.configure(state="disabled")
+            else:  # PART/ASSY
+                # Abilita tutto
+                self.cb_gggg.configure(state="normal")
+                self.chk_use_vvv.configure(state="normal")
+                vvv_state = "normal" if self.use_vvv_var.get() else "disabled"
+                try:
+                    self.cb_vvv.configure(state=vvv_state)
+                except Exception:
+                    pass
+            
+            self._refresh_preview()
+
+        def _browse_link_file(self):
+            """Apre dialog per selezionare un file SolidWorks esistente."""
+            from tkinter import filedialog
+            path = filedialog.askopenfilename(
+                title='Seleziona file SolidWorks',
+                filetypes=[('SolidWorks', '*.sldprt *.sldasm *.slddrw'), ('Tutti i file', '*.*')]
+            )
+            if path:
+                self.link_file_var.set(path)
+
+        def _clear_link_file(self):
+            """Pulisce il campo file esistente."""
+            self.link_file_var.set('')
+
+        def _require_desc_upper(self, value: str, what: str = "campo") -> str | None:
+            """Valida e normalizza descrizione richiesta (maiuscolo)."""
+            v = (value or "").strip()
+            if not v:
+                messagebox.showwarning("PDM (Macro SolidWorks)", f"Il {what} è obbligatorio.")
+                return None
+            return v.upper()
+
+        def _show_next_code(self):
+            """Calcola e mostra il prossimo codice disponibile."""
+            self._refresh_preview()
+
         def _refresh_preview(self):
-            self.lbl_type.configure(text=self._doc_type_label(self.doc_type))
+            """Calcola e mostra il prossimo codice in base al tipo documento e parametri selezionati."""
+            doc_type = self.doc_type_var.get()
             mmm = (self.mmm_var.get() or "").strip()
-            gggg = (self.gggg_var.get() or "").strip()
-
-            vvv = (self.vvv_var.get() or "").strip()
-            use_vvv = bool(self.use_vvv_var.get())
-            if not use_vvv:
-                vvv = ""
-
-            if not mmm or not gggg:
-                self.lbl_preview.configure(text="Prossimo codice: — (seleziona MMM e GGGG)")
-                return
-
-            # Applica regole (upper/lower + alpha/num/len)
-            try:
-                mmm_n = self._normalize_segment("MMM", mmm)
-                gggg_n = self._normalize_segment("GGGG", gggg)
-                vvv_n = self._normalize_segment("VVV", vvv) if vvv else ""
-            except Exception:
-                mmm_n, gggg_n, vvv_n = mmm, gggg, vvv
 
             try:
-                next_seq = self.store.peek_seq(mmm_n, gggg_n, vvv_n, self.doc_type)
-            except Exception:
-                next_seq = 1
+                if doc_type == "MACHINE":
+                    if not mmm:
+                        self.lbl_preview.configure(text="")
+                        return
+                    row = self.store.conn.execute(
+                        "SELECT next_ver FROM ver_counters WHERE mmm=? AND gggg='' AND doc_type='MACHINE';",
+                        (mmm,)
+                    ).fetchone()
+                    seq = int(row["next_ver"]) if row else 1
+                    from pdm_sw.codegen import build_machine_code
+                    code = build_machine_code(self.cfg, mmm, seq)
+                    self.lbl_preview.configure(text=f"Prossimo: {code}")
+                
+                elif doc_type == "GROUP":
+                    gggg = (self.gggg_var.get() or "").strip()
+                    if not mmm or not gggg:
+                        self.lbl_preview.configure(text="")
+                        return
+                    row = self.store.conn.execute(
+                        "SELECT next_ver FROM ver_counters WHERE mmm=? AND gggg=? AND doc_type='GROUP';",
+                        (mmm, gggg)
+                    ).fetchone()
+                    seq = int(row["next_ver"]) if row else 1
+                    from pdm_sw.codegen import build_group_code
+                    code = build_group_code(self.cfg, mmm, gggg, seq)
+                    self.lbl_preview.configure(text=f"Prossimo: {code}")
+                
+                else:  # PART/ASSY
+                    gggg = (self.gggg_var.get() or "").strip()
+                    if not mmm or not gggg:
+                        self.lbl_preview.configure(text="")
+                        return
+                    vvv = (self.vvv_var.get() or "").strip().upper() if self.use_vvv_var.get() else ""
+                    seq = self.store.peek_seq(mmm, gggg, vvv, doc_type)
+                    code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=self.use_vvv_var.get())
+                    self.lbl_preview.configure(text=f"Prossimo: {code}")
+                    
+            except Exception as e:
+                self.lbl_preview.configure(text=f"Errore: {e}")
 
-            try:
-                code = build_code(self.cfg, mmm_n, gggg_n, next_seq, vvv_n, force_vvv=bool(vvv_n))
-            except Exception:
-                code = f"{mmm_n}_{gggg_n}-{vvv_n}-{next_seq:04d}" if vvv_n else f"{mmm_n}_{gggg_n}-{next_seq:04d}"
-
-            self.lbl_preview.configure(text=f"Prossimo codice: {code}")
-
-        def _create_code_and_save_wip(self):
-            # 1) Documento SolidWorks: usa prima il path fornito dal bootstrap (più affidabile di ActiveDoc)
-            sw = self._ensure_sw()
-            active_path = (self.active_doc_path or "").strip()
-
-            doc = None
-            try:
-                doc = self._active_doc()
-            except Exception:
-                doc = None
-
-            # Prova a leggere ActiveDoc subito (utile anche per documenti non ancora salvati)
-            # doc già tentato sopra (ActiveDoc)
-            has_path = bool(active_path)
-            if (not has_path) and (doc is None):
-                _warn("Apri un documento PART o ASSY in SolidWorks.")
-                return
-            detected = _detect_doc_type(doc, active_path)
-            if not detected:
-                _warn("Apri un documento PART o ASSY in SolidWorks.")
-                return
-            self.doc_type = detected
-            try:
-                self.lbl_type.configure(text=self._doc_type_label(self.doc_type))
-            except Exception:
-                pass
-
-            # Recupera istanza documento (ActiveDoc può risultare None in alcune condizioni COM)
-            # doc già tentato sopra (ActiveDoc)
-            try:
-                if doc is not None and hasattr(doc, "GetPathName"):
-                    p = str(doc.GetPathName() or "")
-                    if p and (not active_path):
-                        self.active_doc_path = p
-                        active_path = p
-                    elif active_path:
-                        if os.path.normcase(os.path.normpath(p)) != os.path.normcase(os.path.normpath(active_path)):
-                            doc = None
-            except Exception:
-                doc = None
-
-            if has_path and doc is None:
-                try:
-                    if hasattr(sw, "GetOpenDocumentByName"):
-                        doc = sw.GetOpenDocumentByName(active_path)
-                except Exception:
-                    doc = None
-
-            if has_path and doc is None:
-                try:
-                    doc = open_doc(sw, active_path, silent=True)
-                except Exception:
-                    doc = None
-
-            if doc is None:
-                _warn("Apri un documento PART o ASSY in SolidWorks.")
-                return
-
-            # 2) Selezioni
+        def _generate_document(self):
+            """Genera documento con supporto MACHINE, GROUP, PART, ASSY + import file."""
+            doc_type = self.doc_type_var.get()
+            file_mode = self.file_mode_var.get()
             mmm = (self.mmm_var.get() or "").strip()
-            gggg = (self.gggg_var.get() or "").strip()
-            vvv = (self.vvv_var.get() or "").strip()
-            use_vvv = bool(self.use_vvv_var.get())
-            if not use_vvv:
-                vvv = ""
-
-            if not mmm or not gggg:
-                messagebox.showwarning("PDM (Macro SolidWorks)", "Seleziona MMM e GGGG.")
+            
+            # Validazione parametri base
+            if not mmm:
+                messagebox.showwarning("PDM (Macro SolidWorks)", "Seleziona MMM.")
                 return
-
-            desc = (self.desc_var.get() or "").strip().upper()
-            if not desc:
-                messagebox.showwarning("PDM (Macro SolidWorks)", "Inserisci la descrizione del documento.")
+            
+            desc = self._require_desc_upper(self.desc_var.get(), what="descrizione")
+            if desc is None:
                 return
             self.desc_var.set(desc)
-
-            # 3) Normalizza e valida regole
-            try:
-                mmm_n = self._normalize_segment("MMM", mmm)
-                gggg_n = self._normalize_segment("GGGG", gggg)
-                vvv_n = self._normalize_segment("VVV", vvv) if vvv else ""
-            except ValueError as e:
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Codifica non valida: {e}")
-                return
-
-            # 4) Alloca progressivo e crea codice
-            try:
-                seq = self.store.allocate_seq(mmm_n, gggg_n, vvv_n, self.doc_type)
-                code = build_code(self.cfg, mmm_n, gggg_n, seq, vvv_n, force_vvv=bool(vvv_n))
-            except Exception as e:
-                self._log_activity("CREATE_CODE", status="ERROR", message=f"Allocazione fallita: {e}")
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Errore allocazione codice: {e}")
-                return
-
-            # 5) Path archiviazione
+            
+            # Archivio necessario per creazione file
             archive_root = Path(self.cfg.solidworks.archive_root or "").expanduser()
-            if not str(archive_root).strip():
+            if not str(archive_root).strip() and file_mode != "code_only":
                 messagebox.showwarning("PDM (Macro SolidWorks)", "Archivio (root) non configurato nel PDM (tab SolidWorks).")
                 return
-
-            wip, rel, inrev, rev = archive_dirs(archive_root, mmm_n, gggg_n)
-
-            file_wip = model_path(wip, code, self.doc_type)
-            file_wip_drw = drw_path(wip, code)
-
-            new_doc = Document(
-                id=0,
-                code=code,
-                doc_type=self.doc_type,
-                mmm=mmm_n,
-                gggg=gggg_n,
-                seq=seq,
-                vvv=vvv_n,
-                revision=0,
-                state="WIP",
-                obs_prev_state="",
-                description=desc,
-                file_wip_path=str(file_wip),
-                file_rel_path=str(model_path(rel, code, self.doc_type)),
-                file_inrev_path=str(model_path(inrev, inrev_tag(code, 0), self.doc_type)),
-                file_wip_drw_path=str(file_wip_drw),
-                file_rel_drw_path=str(drw_path(rel, code)),
-                file_inrev_drw_path=str(drw_path(inrev, inrev_tag(code, 0))),
-                created_at="",
-                updated_at="",
-            )
-
-            # 6) Salva in SW (SaveAs)
+            
+            # Validazione specifica per tipo e allocazione codice
+            gggg = ""
+            vvv = ""
+            code = ""
+            seq = 0
+            action_log = ""
+            wip_path = ""
+            wip_drw_path = ""
+            
             try:
-                # Crea cartelle
-                file_wip.parent.mkdir(parents=True, exist_ok=True)
-            except Exception as e:
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Errore creazione cartelle WIP: {e}")
-                return
-
-            res = save_as_doc(doc, str(file_wip))
-            if not getattr(res, "ok", False):
-                msg = getattr(res, "message", "SaveAs fallito.")
-                det = str(getattr(res, "details", "") or "").strip()
-                _log_line(self.log_file, f"SaveAs FAIL | target={file_wip} | msg={msg} | details={det}")
-                messagebox.showwarning(
-                    "PDM (Macro SolidWorks)",
-                    f"Errore SaveAs in WIP: {msg}" + (f"\n\nDettagli: {det}" if det else "")
-                )
-                return
-            else:
-                det = str(getattr(res, "details", "") or "").strip()
-                if det:
-                    _log_line(self.log_file, f"SaveAs OK | target={file_wip} | details={det}")
-
-            # 7) Inserisci in DB
-            try:
-                self.store.add_document(new_doc)
-            except Exception as e:
-                self._log_activity("CREATE_CODE", code=code, status="ERROR", message=f"DB non aggiornato: {e}")
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Codice creato ma DB non aggiornato: {e}")
-                return
-
-            # 8) Scrivi core props su SW (se mappate)
-            try:
-                self._write_core_props_to_sw(new_doc, doc)
-            except Exception:
-                pass
-
-
-            # Descrizione su SolidWorks (custom prop)
-            try:
-                dp = (getattr(self.cfg.solidworks, 'description_prop', 'DESCRIZIONE') or 'DESCRIZIONE').strip()
-                if dp and desc:
-                    set_custom_properties(doc, {dp: desc})
-            except Exception:
-                pass
-            # Refresh
-            self.active_doc_path = str(file_wip)
-            self.lbl_doc.configure(text=self._doc_label_text())
-            self.code_var.set(code)
-            self._refresh_preview()
-            self._log_activity("CREATE_CODE", code=code, status="OK", message=f"Creato in WIP ({new_doc.doc_type})")
-
-            messagebox.showinfo("PDM (Macro SolidWorks)", f"Creato codice {code} e salvato in WIP.")
-
-        def _resolve_copy_sources_from_active(self) -> tuple[Path, Path | None, DocType]:
-            sw = self._ensure_sw()
-            doc = self._active_doc()
-
-            active_path = (self.active_doc_path or "").strip()
-            try:
-                if doc is not None and hasattr(doc, "GetPathName"):
-                    pn = str(doc.GetPathName() or "").strip()
-                    if pn:
-                        active_path = pn
-                        self.active_doc_path = pn
-            except Exception:
-                pass
-
-            if not active_path:
-                raise ValueError("Documento attivo non salvato. Salva il file prima di copiare.")
-
-            p = Path(active_path)
-            ext = p.suffix.lower()
-
-            if ext == ".sldprt":
-                src_model = p
-                src_drw = p.with_suffix(".slddrw")
-                doc_type: DocType = "PART"
-            elif ext == ".sldasm":
-                src_model = p
-                src_drw = p.with_suffix(".slddrw")
-                doc_type = "ASSY"
-            elif ext == ".slddrw":
-                src_drw = p
-                cand: list[tuple[DocType, Path]] = []
-                cand_prt = p.with_suffix(".sldprt")
-                cand_asm = p.with_suffix(".sldasm")
-                if cand_prt.exists():
-                    cand.append(("PART", cand_prt))
-                if cand_asm.exists():
-                    cand.append(("ASSY", cand_asm))
-                if not cand:
-                    raise ValueError("Hai aperto un DRW ma non trovo il modello .sldprt/.sldasm omonimo.")
-                if len(cand) > 1:
-                    raise ValueError("Trovati sia .sldprt che .sldasm con lo stesso nome del DRW. Risolvi il conflitto.")
-                doc_type, src_model = cand[0]
-            else:
-                raise ValueError("Apri un documento PART/ASSY/DRW in SolidWorks.")
-
-            if not src_model.exists():
-                raise FileNotFoundError(f"Modello sorgente non trovato: {src_model}")
-            if src_drw is not None and (not src_drw.exists()):
-                src_drw = None
-
-            # keep SW instance warm; method currently not used but ensures same SW routing
-            _ = sw
-            return src_model, src_drw, doc_type
-
-        def _get_or_open_sw_doc_by_path(self, sw: Any, file_path: Path) -> tuple[Any, bool]:
-            path_s = str(file_path)
-            doc = None
-            opened_here = False
-
-            try:
-                if hasattr(sw, "GetOpenDocumentByName"):
-                    doc = sw.GetOpenDocumentByName(path_s)
-            except Exception:
-                doc = None
-
-            if doc is None:
-                try:
-                    ad = sw.ActiveDoc
-                    if ad is not None and hasattr(ad, "GetPathName"):
-                        ap = str(ad.GetPathName() or "")
-                        if os.path.normcase(os.path.normpath(ap)) == os.path.normcase(os.path.normpath(path_s)):
-                            doc = ad
-                except Exception:
-                    doc = None
-
-            if doc is None:
-                doc = open_doc(sw, path_s, silent=True)
-                opened_here = doc is not None
-
-            return doc, opened_here
-
-        def _copy_active_doc_and_save_wip(self):
-            try:
-                src_model, src_drw, src_doc_type = self._resolve_copy_sources_from_active()
-            except Exception as e:
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Copia fallita: {e}")
-                return
-
-            src_code = _code_from_path(str(src_model))
-            if not src_code:
-                messagebox.showwarning("PDM (Macro SolidWorks)", "Impossibile identificare il codice sorgente dal file attivo.")
-                return
-
-            src_doc = self.store.get_document(src_code)
-            if not src_doc:
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Codice sorgente non presente nel PDM: {src_code}")
-                return
-
-            src_state = str(getattr(src_doc, "state", "") or "").strip().upper()
-            if src_state not in ("WIP", "REL"):
-                messagebox.showwarning("PDM (Macro SolidWorks)", "La copia e consentita solo da documenti in stato WIP o REL.")
-                return
-
-            src_doc_type_db = str(getattr(src_doc, "doc_type", "") or "").strip().upper()
-            if src_doc_type_db in ("PART", "ASSY"):
-                src_doc_type = src_doc_type_db  # trust DB when available
-
-            mmm = (self.mmm_var.get() or "").strip()
-            gggg = (self.gggg_var.get() or "").strip()
-            vvv = (self.vvv_var.get() or "").strip()
-            use_vvv = bool(self.use_vvv_var.get())
-            if not use_vvv:
-                vvv = ""
-
-            if not mmm or not gggg:
-                messagebox.showwarning("PDM (Macro SolidWorks)", "Seleziona MMM e GGGG.")
-                return
-
-            try:
-                mmm_n = self._normalize_segment("MMM", mmm)
-                gggg_n = self._normalize_segment("GGGG", gggg)
-                vvv_n = self._normalize_segment("VVV", vvv) if vvv else ""
-            except Exception as e:
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Codifica non valida: {e}")
-                return
-
-            try:
-                seq = self.store.allocate_seq(mmm_n, gggg_n, vvv_n, src_doc_type)
-                code = build_code(self.cfg, mmm_n, gggg_n, seq, vvv_n, force_vvv=bool(vvv_n))
-            except Exception as e:
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Errore allocazione codice: {e}")
-                return
-
-            archive_root = Path(self.cfg.solidworks.archive_root or "").expanduser()
-            if not str(archive_root).strip():
-                messagebox.showwarning("PDM (Macro SolidWorks)", "Archivio (root) non configurato nel PDM.")
-                return
-
-            wip, rel, inrev, _rev = archive_dirs(archive_root, mmm_n, gggg_n)
-            file_wip = model_path(wip, code, src_doc_type)
-            file_wip_drw = drw_path(wip, code)
-
-            if file_wip.exists():
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"File modello destinazione gia presente:\n{file_wip}")
-                return
-            if src_drw is not None and file_wip_drw.exists():
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"File disegno destinazione gia presente:\n{file_wip_drw}")
-                return
-
-            desc = str(getattr(src_doc, "description", "") or "").strip().upper()
-            self.desc_var.set(desc)
-
-            warnings: list[str] = []
-            created_paths: list[Path] = []
-            opened_here: list[tuple[Any, str]] = []
-
-            sw = None
-            try:
-                sw = self._ensure_sw()
-
-                model_doc = None
-                try:
-                    model_doc, opened = self._get_or_open_sw_doc_by_path(sw, src_model)
-                    if model_doc is not None and opened:
-                        opened_here.append((model_doc, str(src_model)))
-                except Exception:
-                    model_doc = None
-
-                model_saved = False
-                if model_doc is not None:
-                    res_m = save_as_doc(model_doc, str(file_wip))
-                    model_saved = bool(getattr(res_m, "ok", False))
-                    if not model_saved:
-                        msg = str(getattr(res_m, "message", "SaveAs modello fallito."))
-                        det = str(getattr(res_m, "details", "") or "").strip()
-                        warnings.append("SaveAs modello fallito, uso copia file." + (f" Dettagli: {msg} {det}".strip() if (msg or det) else ""))
-
-                if not model_saved:
-                    safe_copy(src_model, file_wip, overwrite=False)
-                created_paths.append(file_wip)
-                set_readonly(file_wip, readonly=False)
-
-                drw_copied = False
-                if src_drw is not None:
-                    drw_doc = None
-                    try:
-                        drw_doc, opened = self._get_or_open_sw_doc_by_path(sw, src_drw)
-                        if drw_doc is not None and opened:
-                            opened_here.append((drw_doc, str(src_drw)))
-                    except Exception:
-                        drw_doc = None
-
-                    drw_saved = False
-                    if drw_doc is not None:
-                        res_d = save_as_doc(drw_doc, str(file_wip_drw))
-                        drw_saved = bool(getattr(res_d, "ok", False))
-                        if not drw_saved:
-                            msg = str(getattr(res_d, "message", "SaveAs disegno fallito."))
-                            det = str(getattr(res_d, "details", "") or "").strip()
-                            warnings.append("SaveAs disegno fallito, uso copia file." + (f" Dettagli: {msg} {det}".strip() if (msg or det) else ""))
-
-                    if not drw_saved:
-                        safe_copy(src_drw, file_wip_drw, overwrite=False)
-                    created_paths.append(file_wip_drw)
-                    set_readonly(file_wip_drw, readonly=False)
-                    drw_copied = True
-                else:
-                    warnings.append("Disegno sorgente non trovato: copiato solo il modello.")
-
+                from pdm_sw.codegen import build_machine_code, build_group_code
+                
+                if doc_type == "MACHINE":
+                    # MACHINE: solo MMM necessario
+                    seq = self.store.allocate_ver_seq(mmm, "", "MACHINE")
+                    code = build_machine_code(self.cfg, mmm, seq)
+                    
+                    if str(archive_root).strip():
+                        from pdm_sw.archive import archive_dirs_for_machine
+                        wip, rel, inrev, rev = archive_dirs_for_machine(archive_root, mmm)
+                        wip_path = str(model_path(wip, code, "MACHINE"))
+                        if file_mode == "model_drw":
+                            wip_drw_path = str(drw_path(wip, code))
+                    action_log = "CREATE_MACHINE"
+                    
+                elif doc_type == "GROUP":
+                    # GROUP: MMM + GGGG necessari
+                    gggg = (self.gggg_var.get() or "").strip()
+                    if not gggg:
+                        messagebox.showwarning("PDM (Macro SolidWorks)", "Seleziona GGGG.")
+                        return
+                    
+                    seq = self.store.allocate_ver_seq(mmm, gggg, "GROUP")
+                    code = build_group_code(self.cfg, mmm, gggg, seq)
+                    
+                    if str(archive_root).strip():
+                        from pdm_sw.archive import archive_dirs_for_group
+                        wip, rel, inrev, rev = archive_dirs_for_group(archive_root, mmm, gggg)
+                        wip_path = str(model_path(wip, code, "GROUP"))
+                        if file_mode == "model_drw":
+                            wip_drw_path = str(drw_path(wip, code))
+                    action_log = "CREATE_GROUP"
+                    
+                else:  # PART or ASSY
+                    # PART/ASSY: MMM + GGGG + opzionale variante
+                    gggg = (self.gggg_var.get() or "").strip()
+                    if not gggg:
+                        messagebox.showwarning("PDM (Macro SolidWorks)", "Seleziona GGGG.")
+                        return
+                    
+                    vvv = (self.vvv_var.get() or "").strip() if self.use_vvv_var.get() else ""
+                    vvv_norm = self._normalize_segment("VVV", vvv) if vvv else ""
+                    seq = self.store.allocate_seq(mmm, gggg, vvv_norm, doc_type)
+                    vvv = vvv_norm
+                    code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=bool(vvv))
+                    
+                    if str(archive_root).strip():
+                        wip, rel, inrev, rev = archive_dirs(archive_root, mmm, gggg)
+                        wip_path = str(model_path(wip, code, doc_type))
+                        if file_mode == "model_drw":
+                            wip_drw_path = str(drw_path(wip, code))
+                    action_log = "CREATE_CODE"
+                
+                # Crea record documento in DB
                 new_doc = Document(
                     id=0,
                     code=code,
-                    doc_type=src_doc_type,
-                    mmm=mmm_n,
-                    gggg=gggg_n,
+                    doc_type=doc_type,
+                    mmm=mmm,
+                    gggg=gggg,
                     seq=seq,
-                    vvv=vvv_n,
+                    vvv=vvv,
                     revision=0,
                     state="WIP",
                     obs_prev_state="",
                     description=desc,
-                    file_wip_path=str(file_wip),
+                    file_wip_path=wip_path,
                     file_rel_path="",
                     file_inrev_path="",
-                    file_wip_drw_path=str(file_wip_drw) if drw_copied else "",
+                    file_wip_drw_path=wip_drw_path,
                     file_rel_drw_path="",
                     file_inrev_drw_path="",
                     created_at="",
                     updated_at="",
                 )
-                self.store.add_document(new_doc)
-
+                
+                # Gestione file: import esistente o creazione da template o SaveAs documento attivo
+                link_file = self.link_file_var.get().strip()
+                sw = self._ensure_sw()
+                sw_doc_active = None
+                
                 try:
-                    custom_vals = self.store.get_custom_values(src_doc.code) or {}
+                    sw_doc_active = self._active_doc()
                 except Exception:
-                    custom_vals = {}
-                for prop_name, prop_value in custom_vals.items():
-                    self.store.set_custom_value(code, str(prop_name), str(prop_value))
-
-                _log_line(
-                    self.workflow_log_file,
-                    "COPY | "
-                    f"src={src_doc.code} ({src_state}) -> dst={code} (WIP) | "
-                    f"type={src_doc_type} | mmm={mmm_n} gggg={gggg_n} vvv={vvv_n or '-'} | "
-                    f"model={file_wip} | drw={'YES' if drw_copied else 'NO'} | custom_props={len(custom_vals)}",
-                )
-
-                # allinea proprieta core/descrizione sui file appena creati
-                try:
-                    mdl_new = open_doc(sw, str(file_wip), silent=True)
-                    if mdl_new is not None:
-                        self._write_core_props_to_sw(new_doc, mdl_new)
-                        dp = (getattr(self.cfg.solidworks, "description_prop", "DESCRIZIONE") or "DESCRIZIONE").strip()
-                        if dp:
-                            set_custom_properties(mdl_new, {dp: desc})
-                        save_existing_doc(mdl_new)
-                        close_doc(sw, mdl_new, str(file_wip))
-                except Exception:
-                    pass
-
-                if drw_copied:
+                    sw_doc_active = None
+                
+                if link_file and doc_type in ("PART", "ASSY"):
+                    # Import file esistente
+                    self._import_linked_file_to_wip(new_doc, link_file, file_mode == "model_drw")
+                    
+                elif file_mode in ("model", "model_drw") and sw_doc_active is not None:
+                    # SaveAs documento SolidWorks attivo
+                    if not wip_path:
+                        messagebox.showwarning("PDM (Macro SolidWorks)", "Path WIP non disponibile (archivio non configurato).")
+                        return
+                    
+                    # Crea cartelle
+                    Path(wip_path).parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # SaveAs
+                    res = save_as_doc(sw_doc_active, wip_path)
+                    if not getattr(res, "ok", False):
+                        msg = getattr(res, "message", "SaveAs fallito.")
+                        messagebox.showwarning("PDM (Macro SolidWorks)", f"Errore SaveAs: {msg}")
+                        return
+                    
+                    # Aggiorna path attivo
+                    self.active_doc_path = wip_path
+                    
+                    # Scrivi props core su SW
                     try:
-                        drw_new = open_doc(sw, str(file_wip_drw), silent=True)
-                        if drw_new is not None:
-                            self._write_core_props_to_sw(new_doc, drw_new)
-                            save_existing_doc(drw_new)
-                            close_doc(sw, drw_new, str(file_wip_drw))
+                        self._write_core_props_to_sw(new_doc, sw_doc_active)
                     except Exception:
                         pass
-
-                self.doc_type = src_doc_type
-                self.active_doc_path = str(file_wip)
+                    
+                    # Descrizione su SW
+                    dp = (getattr(self.cfg.solidworks, 'description_prop', 'DESCRIZIONE') or 'DESCRIZIONE').strip()
+                    if dp and desc:
+                        set_custom_properties(sw_doc_active, {dp: desc})
+                
+                elif file_mode in ("model", "model_drw"):
+                    # Creazione da template
+                    if not wip_path:
+                        messagebox.showwarning("PDM (Macro SolidWorks)", "Path WIP non disponibile (archivio non configurato).")
+                        return
+                    
+                    tpl_model = ""
+                    if doc_type in ("PART", "MACHINE"):
+                        tpl_model = self.cfg.solidworks.template_part
+                    elif doc_type in ("ASSY", "GROUP"):
+                        tpl_model = self.cfg.solidworks.template_assembly
+                    
+                    if not tpl_model or not Path(tpl_model).exists():
+                        messagebox.showwarning("PDM (Macro SolidWorks)", f"Template non configurato o non trovato per {doc_type}.")
+                        return
+                    
+                    # Crea file modello
+                    res_model = create_model_file(sw, tpl_model, wip_path, props={})
+                    if not getattr(res_model, "ok", False):
+                        msg = getattr(res_model, "message", "Creazione modello fallita.")
+                        messagebox.showwarning("PDM (Macro SolidWorks)", f"Errore creazione modello: {msg}")
+                        return
+                    
+                    # Crea disegno se richiesto
+                    if file_mode == "model_drw" and wip_drw_path:
+                        tpl_drw = self.cfg.solidworks.template_drawing
+                        if tpl_drw and Path(tpl_drw).exists():
+                            create_drawing_file(sw, tpl_drw, wip_drw_path, props={})
+                
+                # Inserisci documento in DB
+                self.store.add_document(new_doc)
+                
+                # Log attività
+                self._log_activity(action_log, code=code, status="OK", message=f"Creato {doc_type}")
+                
+                # Refresh UI
                 self.code_var.set(code)
                 self.lbl_doc.configure(text=self._doc_label_text())
                 self._refresh_preview()
                 self._refresh_wf_state()
-                self._log_activity("COPY_CODE", code=code, status="OK", message=f"Copia da {src_doc.code} ({src_state})")
-
-                msg = (
-                    f"Copia completata.\n\n"
-                    f"Sorgente: {src_doc.code} ({src_state})\n"
-                    f"Nuovo codice: {code}\n"
-                    f"Nuovo stato: WIP | Rev: 00\n"
-                    f"Proprieta custom copiate: {len(custom_vals)}"
-                )
-                messagebox.showinfo("PDM (Macro SolidWorks)", msg)
-                if warnings:
-                    messagebox.showwarning("PDM (Macro SolidWorks)", "\n".join(warnings))
+                
+                messagebox.showinfo("PDM (Macro SolidWorks)", f"Documento creato: {code}")
+                
             except Exception as e:
-                self._log_activity("COPY_CODE", code=code if 'code' in locals() else "", status="ERROR", message=str(e))
-                for p in reversed(created_paths):
-                    try:
-                        if p.exists():
-                            p.unlink()
-                    except Exception:
-                        pass
-                messagebox.showwarning("PDM (Macro SolidWorks)", f"Copia fallita: {e}")
-                return
-            finally:
-                if sw is not None:
-                    for od, p in opened_here:
-                        try:
-                            close_doc(sw, doc=od, file_path=p)
-                        except Exception:
-                            pass
+                self._log_activity(action_log if action_log else "CREATE_ERROR", 
+                                 code=code if code else "", status="ERROR", message=str(e))
+                messagebox.showwarning("PDM (Macro SolidWorks)", f"Errore creazione documento: {e}")
+
+        def _import_linked_file_to_wip(self, doc: Document, src_path: str, auto_drw: bool):
+            """Importa file esistente e opzionalmente DRW nella cartella WIP."""
+            p = Path(src_path)
+            if not p.exists():
+                raise ValueError('File selezionato non trovato.')
+
+            ext = p.suffix.lower()
+            # determina sorgente modello
+            src_model = p
+            if ext == '.slddrw':
+                # prova a trovare modello con stesso nome
+                cand_prt = p.with_suffix('.sldprt')
+                cand_asm = p.with_suffix('.sldasm')
+                if doc.doc_type == 'PART' and cand_prt.exists():
+                    src_model = cand_prt
+                elif doc.doc_type == 'ASSY' and cand_asm.exists():
+                    src_model = cand_asm
+                elif cand_prt.exists():
+                    src_model = cand_prt
+                elif cand_asm.exists():
+                    src_model = cand_asm
+                else:
+                    raise ValueError('Hai selezionato un DRW ma non trovo il modello (.sldprt/.sldasm) con stesso nome.')
+            
+            # check coerenza tipo
+            if src_model.suffix.lower() == '.sldprt' and doc.doc_type not in ('PART', 'MACHINE'):
+                raise ValueError("Il file selezionato è una PARTE (.sldprt) ma il tipo scelto è ASSY/GROUP.")
+            if src_model.suffix.lower() == '.sldasm' and doc.doc_type not in ('ASSY', 'GROUP'):
+                raise ValueError("Il file selezionato è un ASSIEME (.sldasm) ma il tipo scelto è PART/MACHINE.")
+
+            if not doc.file_wip_path:
+                raise ValueError("Path WIP non disponibile per il documento.")
+            
+            dst_model = Path(doc.file_wip_path)
+            if dst_model.exists():
+                raise ValueError("Esiste già un file modello in archivio con questo codice (WIP).")
+            
+            dst_model.parent.mkdir(parents=True, exist_ok=True)
+            safe_copy(src_model, dst_model)
+            set_readonly(dst_model, readonly=False)
+            self.store.update_document(doc.code, file_wip_path=str(dst_model))
+
+            # DRW: stesso nome del modello, stessa cartella
+            if auto_drw:
+                src_drw = src_model.with_suffix('.slddrw')
+                if src_drw.exists() and doc.file_wip_drw_path:
+                    dst_drw = Path(doc.file_wip_drw_path)
+                    if not dst_drw.exists():
+                        safe_copy(src_drw, dst_drw)
+                        set_readonly(dst_drw, readonly=False)
+                    self.store.update_document(doc.code, file_wip_drw_path=str(dst_drw))
 
         def _write_core_props_to_sw(self, docrec: Document, sw_doc: Any):
             # mapping PDM->SW: usa solo quelle marcate 'enabled'

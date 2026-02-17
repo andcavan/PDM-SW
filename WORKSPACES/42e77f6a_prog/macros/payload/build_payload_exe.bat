@@ -4,7 +4,7 @@ REM Build EXE payload (richiede pyinstaller)
 REM Eseguire da questa cartella: WORKSPACES\<ws_id>\macros\payload
 
 REM Usa python della venv del PDM se esiste
-set PY="C:\PDM-SW\.venv\Scripts\python.exe"
+set PY="c:\PDM-SW\.venv\Scripts\python.exe"
 if not exist %PY% set PY=python
 
 %PY% -m pip show pyinstaller >nul 2>nul

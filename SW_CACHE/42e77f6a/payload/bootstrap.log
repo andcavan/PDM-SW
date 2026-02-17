@@ -488,3 +488,45 @@
 11/02/2026 19:30:54 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
 11/02/2026 19:30:54 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
 11/02/2026 19:30:55 | Shell PID: 35948
+17/02/2026 22:41:19 | Bootstrap start. ActivePath=
+17/02/2026 22:41:19 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+17/02/2026 22:41:19 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+17/02/2026 22:41:19 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+17/02/2026 22:41:19 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+17/02/2026 22:41:19 | Shell PID: 35556
+17/02/2026 22:42:43 | Bootstrap start. ActivePath=
+17/02/2026 22:42:43 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+17/02/2026 22:42:43 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+17/02/2026 22:42:43 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+17/02/2026 22:42:43 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+17/02/2026 22:42:43 | Shell PID: 29924
+17/02/2026 22:44:22 | Bootstrap start. ActivePath=C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-V0001.SLDASM
+17/02/2026 22:44:22 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+17/02/2026 22:44:22 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+17/02/2026 22:44:22 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+17/02/2026 22:44:22 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+17/02/2026 22:44:22 | Shell PID: 37368
+17/02/2026 23:28:11 | Bootstrap start. ActivePath=
+17/02/2026 23:28:11 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+17/02/2026 23:28:11 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+17/02/2026 23:28:11 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+17/02/2026 23:28:11 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+17/02/2026 23:28:11 | Shell PID: 20992
+17/02/2026 23:33:00 | Bootstrap start. ActivePath=
+17/02/2026 23:33:00 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+17/02/2026 23:33:00 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+17/02/2026 23:33:00 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+17/02/2026 23:33:00 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+17/02/2026 23:33:00 | Shell PID: 31980
+17/02/2026 23:35:17 | Bootstrap start. ActivePath=
+17/02/2026 23:35:17 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+17/02/2026 23:35:17 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+17/02/2026 23:35:17 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+17/02/2026 23:35:17 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+17/02/2026 23:35:17 | Shell PID: 37292
+17/02/2026 23:38:25 | Bootstrap start. ActivePath=
+17/02/2026 23:38:25 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+17/02/2026 23:38:25 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+17/02/2026 23:38:25 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+17/02/2026 23:38:25 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+17/02/2026 23:38:25 | Shell PID: 32248

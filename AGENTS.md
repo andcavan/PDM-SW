@@ -20,6 +20,8 @@ Le regole locali di progetto possono sovrascrivere queste istruzioni.
 - Non cambiare parti non richieste.
 - Preserva lo stile gia presente nel progetto.
 - Prima di chiudere, fai almeno un controllo rapido (sintassi/test locali se disponibili).
+- Tieni sotto controllo la dimensione di file, quando lo ritieni necessario proponi strategie per ridurre le dimensioni
+
 
 ## Output
 - Usa riferimenti file con path cliccabile quando spieghi modifiche.

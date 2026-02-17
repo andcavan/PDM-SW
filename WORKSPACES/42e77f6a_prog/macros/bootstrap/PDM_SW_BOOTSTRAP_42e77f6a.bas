@@ -7,11 +7,11 @@ Option Explicit
 '
 ' Generato dal PDM.
 
-Const PDM_ROOT As String = "C:\PDM-SW"
+Const PDM_ROOT As String = "c:\PDM-SW"
 Const WS_ID As String = "42e77f6a"
 Const WS_FOLDER As String = "42e77f6a_prog"  ' cartella workspace (es. id_nome)
 
-Const PY_EXE As String = "C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe"  ' python.exe o pythonw.exe usato dal PDM
+Const PY_EXE As String = "C:\Users\prog3\AppData\Local\Programs\Python\Python311\pythonw.exe"  ' python.exe o pythonw.exe usato dal PDM
 
 Const PAYLOAD_EXE As String = "PDM_SW_PAYLOAD.exe"
 Const PAYLOAD_PY As String = "PDM_SW_PAYLOAD.py"
