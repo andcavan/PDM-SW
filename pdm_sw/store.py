@@ -89,6 +89,16 @@ class Store:
             pass
 
         c.execute("""
+        CREATE TABLE IF NOT EXISTS ver_counters(
+            mmm TEXT NOT NULL,
+            gggg TEXT NOT NULL DEFAULT '',
+            doc_type TEXT NOT NULL,
+            next_ver INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY(mmm, gggg, doc_type)
+        );
+        """)
+
+        c.execute("""
         CREATE TABLE IF NOT EXISTS documents(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT NOT NULL UNIQUE,
@@ -313,6 +323,44 @@ class Store:
             if next_assy < 1:
                 raise ValueError("Sequenza ASSY esaurita (sotto 0001)")
             return next_assy
+
+    def allocate_ver_seq(self, mmm: str, gggg: str, doc_type: DocType) -> int:
+        """Alloca progressivo versione per MACHINE o GROUP."""
+        dt = str(doc_type).upper()
+        if dt not in ("MACHINE", "GROUP"):
+            raise ValueError(f"allocate_ver_seq valido solo per MACHINE/GROUP, ricevuto: {dt}")
+        
+        # MACHINE: gggg vuoto, GROUP: gggg valorizzato
+        gggg_key = "" if dt == "MACHINE" else gggg
+        
+        cur = self.conn.cursor()
+        try:
+            cur.execute("BEGIN IMMEDIATE;")
+            row = cur.execute(
+                "SELECT next_ver FROM ver_counters WHERE mmm=? AND gggg=? AND doc_type=?;",
+                (mmm, gggg_key, dt),
+            ).fetchone()
+            if row is None:
+                next_ver = 1
+                cur.execute(
+                    "INSERT INTO ver_counters(mmm, gggg, doc_type, next_ver) VALUES(?, ?, ?, ?);",
+                    (mmm, gggg_key, dt, next_ver + 1),
+                )
+            else:
+                next_ver = int(row["next_ver"])
+                cur.execute(
+                    "UPDATE ver_counters SET next_ver=? WHERE mmm=? AND gggg=? AND doc_type=?;",
+                    (next_ver + 1, mmm, gggg_key, dt),
+                )
+            self.conn.commit()
+        except Exception:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            raise
+        self._mark_dirty()
+        return next_ver
 
     # --- documents
     def add_document(self, doc: Document) -> int:

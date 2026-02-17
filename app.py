@@ -15,8 +15,8 @@ from pdm_sw.workspace import WorkspaceManager
 from pdm_sw.config import ConfigManager, AppConfig, SegmentRule
 from pdm_sw.store import Store
 from pdm_sw.models import Document
-from pdm_sw.codegen import build_code
-from pdm_sw.archive import archive_dirs, model_path, drw_path, inrev_tag, safe_copy, set_readonly, release_wip, create_inrev, approve_inrev, cancel_inrev, set_obsolete, restore_obsolete
+from pdm_sw.codegen import build_code, build_machine_code, build_group_code
+from pdm_sw.archive import archive_dirs, archive_dirs_for_machine, archive_dirs_for_group, model_path, drw_path, inrev_tag, safe_copy, set_readonly, release_wip, create_inrev, approve_inrev, cancel_inrev, set_obsolete, restore_obsolete
 from pdm_sw.backup import BackupManager
 from pdm_sw.sw_integration import test_solidworks_connection
 from pdm_sw.macro_publish import publish_macro
@@ -29,7 +29,7 @@ from pdm_sw.ui.report_mixin import ReportMixin
 
 APP_DIR = Path(__file__).resolve().parent
 LOCAL_SETTINGS_PATH = APP_DIR / "local_settings.json"
-APP_REV = "v49.5"
+APP_REV = "v50.1"
 APP_TITLE = f"PDM SolidWorks - Workspace Edition | Rev {APP_REV}"
 DOC_LOCK_TTL_SECONDS = 20 * 60
 WORKFLOW_WIDTH_RATIO_DEFAULT = 0.40
@@ -1427,62 +1427,93 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         frame = ctk.CTkFrame(self.tab_cod)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        top = ctk.CTkFrame(frame)
-        top.pack(fill="x", pady=(0, 10))
-
+        # Variabili
         self.doc_type_var = tk.StringVar(value="PART")
+        self.file_mode_var = tk.StringVar(value="code_only")  # code_only, model, model_drw
         self.mmm_var = tk.StringVar(value="")
         self.gggg_var = tk.StringVar(value="")
         self.use_vvv_var = tk.BooleanVar(value=self.cfg.code.include_vvv_by_default)
         self.vvv_choice_var = tk.StringVar(value=(self.cfg.code.vvv_presets[0] if self.cfg.code.vvv_presets else "V01"))
         self.desc_var = tk.StringVar(value="")
-        self.create_drw_var = tk.BooleanVar(value=True)
-
-        ctk.CTkLabel(top, text="Tipo").grid(row=0, column=0, padx=6, pady=6, sticky="w")
-        ctk.CTkOptionMenu(top, variable=self.doc_type_var, values=["PART", "ASSY"], width=120).grid(row=0, column=1, padx=6, pady=6, sticky="w")
-
-        ctk.CTkLabel(top, text="MMM").grid(row=0, column=2, padx=6, pady=6, sticky="w")
-        self.mmm_menu = ctk.CTkOptionMenu(top, variable=self.mmm_var, values=[""], width=140, command=lambda _=None: self._refresh_group_menu())
-        self.mmm_menu.grid(row=0, column=3, padx=6, pady=6, sticky="w")
-
-        ctk.CTkLabel(top, text="GGGG").grid(row=0, column=4, padx=6, pady=6, sticky="w")
-        self.gggg_menu = ctk.CTkOptionMenu(top, variable=self.gggg_var, values=[""], width=160)
-        self.gggg_menu.grid(row=0, column=5, padx=6, pady=6, sticky="w")
-
-        ctk.CTkCheckBox(top, text="VVV", variable=self.use_vvv_var, command=self._refresh_preview).grid(row=1, column=0, padx=6, pady=6, sticky="w")
-        self.vvv_menu = ctk.CTkOptionMenu(top, variable=self.vvv_choice_var, values=self.cfg.code.vvv_presets or ["V01"], width=120, command=lambda _=None: self._refresh_preview())
-        self.vvv_menu.grid(row=1, column=1, padx=6, pady=6, sticky="w")
-
-        ctk.CTkCheckBox(top, text="Crea anche DRW", variable=self.create_drw_var).grid(row=1, column=2, padx=6, pady=6, sticky="w")
-
-        ctk.CTkLabel(top, text="Descrizione").grid(row=2, column=0, padx=6, pady=6, sticky="w")
-        ctk.CTkEntry(top, textvariable=self.desc_var).grid(row=2, column=1, columnspan=5, padx=6, pady=6, sticky="ew")
-
-        # File esistente da collegare/importare (opzionale)
         self.link_file_var = tk.StringVar(value="")
         self.link_auto_drw_var = tk.BooleanVar(value=True)
 
-        ctk.CTkLabel(top, text="File esistente").grid(row=3, column=0, padx=6, pady=6, sticky="w")
-        ctk.CTkEntry(top, textvariable=self.link_file_var).grid(row=3, column=1, columnspan=3, padx=6, pady=6, sticky="ew")
-        ctk.CTkButton(top, text="Sfoglia...", width=110, command=self._browse_link_file).grid(row=3, column=4, padx=6, pady=6, sticky="w")
-        ctk.CTkButton(top, text="Pulisci", width=90, command=self._clear_link_file).grid(row=3, column=5, padx=6, pady=6, sticky="w")
-        ctk.CTkCheckBox(top, text="Importa anche DRW se presente", variable=self.link_auto_drw_var).grid(row=4, column=1, padx=6, pady=(0, 6), sticky="w")
+        # --- TIPO DOCUMENTO ---
+        type_frame = ctk.CTkFrame(frame)
+        type_frame.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(type_frame, text="TIPO DOCUMENTO", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=8, pady=6)
+        
+        radio_frame = ctk.CTkFrame(type_frame, fg_color="transparent")
+        radio_frame.pack(fill="x", padx=8, pady=4)
+        
+        ctk.CTkRadioButton(radio_frame, text="Macchina (MMM-V####) → crea ASM", variable=self.doc_type_var, value="MACHINE", command=self._on_doc_type_change).pack(anchor="w", pady=2)
+        ctk.CTkRadioButton(radio_frame, text="Gruppo (MMM_GGGG-V####) → crea ASM", variable=self.doc_type_var, value="GROUP", command=self._on_doc_type_change).pack(anchor="w", pady=2)
+        ctk.CTkRadioButton(radio_frame, text="Parte (MMM_GGGG-0001) → crea PRT", variable=self.doc_type_var, value="PART", command=self._on_doc_type_change).pack(anchor="w", pady=2)
+        ctk.CTkRadioButton(radio_frame, text="Assieme (MMM_GGGG-9999) → crea ASM", variable=self.doc_type_var, value="ASSY", command=self._on_doc_type_change).pack(anchor="w", pady=2)
 
+        # --- PARAMETRI ---
+        params_frame = ctk.CTkFrame(frame)
+        params_frame.pack(fill="x", pady=(0, 10))
+        
+        params_grid = ctk.CTkFrame(params_frame, fg_color="transparent")
+        params_grid.pack(fill="x", padx=8, pady=8)
+        
+        ctk.CTkLabel(params_grid, text="MMM").grid(row=0, column=0, padx=6, pady=6, sticky="w")
+        self.mmm_menu = ctk.CTkOptionMenu(params_grid, variable=self.mmm_var, values=[""], width=140, command=lambda _: self._refresh_group_menu())
+        self.mmm_menu.grid(row=0, column=1, padx=6, pady=6, sticky="w")
+        
+        ctk.CTkLabel(params_grid, text="GGGG").grid(row=0, column=2, padx=6, pady=6, sticky="w")
+        self.gggg_menu = ctk.CTkOptionMenu(params_grid, variable=self.gggg_var, values=[""], width=140, command=lambda _: self._refresh_preview())
+        self.gggg_menu.grid(row=0, column=3, padx=6, pady=6, sticky="w")
+        
+        self.vvv_check = ctk.CTkCheckBox(params_grid, text="Variante", variable=self.use_vvv_var, command=self._refresh_preview)
+        self.vvv_check.grid(row=0, column=4, padx=6, pady=6, sticky="w")
+        
+        self.vvv_menu = ctk.CTkOptionMenu(params_grid, variable=self.vvv_choice_var, values=self.cfg.code.vvv_presets or ["V01"], width=120, command=lambda _: self._refresh_preview())
+        self.vvv_menu.grid(row=0, column=5, padx=6, pady=6, sticky="w")
+        
+        ctk.CTkLabel(params_grid, text="Descrizione").grid(row=1, column=0, padx=6, pady=6, sticky="w")
+        ctk.CTkEntry(params_grid, textvariable=self.desc_var, width=500).grid(row=1, column=1, columnspan=5, padx=6, pady=6, sticky="ew")
+        
+        params_grid.grid_columnconfigure(5, weight=1)
 
-        top.grid_columnconfigure(5, weight=1)
+        # File esistente (opzionale)
+        link_frame = ctk.CTkFrame(params_frame, fg_color="transparent")
+        link_frame.pack(fill="x", padx=8, pady=(0, 8))
+        ctk.CTkLabel(link_frame, text="File esistente (opz)").pack(side="left", padx=6)
+        ctk.CTkEntry(link_frame, textvariable=self.link_file_var, width=350).pack(side="left", padx=6)
+        ctk.CTkButton(link_frame, text="Sfoglia", width=90, command=self._browse_link_file).pack(side="left", padx=4)
+        ctk.CTkButton(link_frame, text="Pulisci", width=80, command=self._clear_link_file).pack(side="left", padx=4)
+        ctk.CTkCheckBox(link_frame, text="Importa anche DRW", variable=self.link_auto_drw_var).pack(side="left", padx=12)
 
-        btns = ctk.CTkFrame(frame, fg_color="transparent")
-        btns.pack(fill="x", pady=6)
-        ctk.CTkButton(btns, text="Crea solo codice (WIP)", command=self._create_code_only).pack(side="left", padx=6)
-        ctk.CTkButton(btns, text="Crea codice + file SolidWorks", command=self._create_code_and_files).pack(side="left", padx=6)
-        ctk.CTkButton(btns, text="PROSSIMO CODICE", command=self._show_next_code).pack(side="left", padx=6)
-        self.preview_label = ctk.CTkLabel(
-            btns,
-            text="",
-            font=ctk.CTkFont(size=24, weight="bold"),
-        )
+        # --- CREAZIONE FILE SOLIDWORKS ---
+        file_frame = ctk.CTkFrame(frame)
+        file_frame.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(file_frame, text="CREAZIONE FILE SOLIDWORKS", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=8, pady=6)
+        
+        file_radio_frame = ctk.CTkFrame(file_frame, fg_color="transparent")
+        file_radio_frame.pack(fill="x", padx=8, pady=4)
+        
+        ctk.CTkRadioButton(file_radio_frame, text="Solo codice (no file)", variable=self.file_mode_var, value="code_only").pack(anchor="w", pady=2)
+        ctk.CTkRadioButton(file_radio_frame, text="Modello (PRT/ASM automatico)", variable=self.file_mode_var, value="model").pack(anchor="w", pady=2)
+        ctk.CTkRadioButton(file_radio_frame, text="Modello + Disegno", variable=self.file_mode_var, value="model_drw").pack(anchor="w", pady=2)
+
+        # --- AZIONI ---
+        actions_frame = ctk.CTkFrame(frame)
+        actions_frame.pack(fill="x", pady=(10, 0))
+        
+        left_actions = ctk.CTkFrame(actions_frame, fg_color="transparent")
+        left_actions.pack(side="left", padx=8, pady=8)
+        ctk.CTkButton(left_actions, text="PROSSIMO CODICE", width=160, command=self._show_next_code).pack(side="left", padx=6)
+        
+        self.preview_label = ctk.CTkLabel(left_actions, text="", font=ctk.CTkFont(size=18, weight="bold"), text_color="#2E7D32")
         self.preview_label.pack(side="left", padx=12)
+        
+        right_actions = ctk.CTkFrame(actions_frame, fg_color="transparent")
+        right_actions.pack(side="right", padx=8, pady=8)
+        ctk.CTkButton(right_actions, text="GENERA", width=180, height=40, font=ctk.CTkFont(size=16, weight="bold"), fg_color="#27AE60", hover_color="#229954", command=self._generate_document).pack()
 
+        self._on_doc_type_change()
         self._refresh_preview()
 
 
@@ -1525,33 +1556,99 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             self.vvv_choice_var.set(vals[0])
         self._refresh_preview()
 
+    def _on_doc_type_change(self):
+        """Abilita/disabilita controlli in base al tipo documento selezionato."""
+        doc_type = self.doc_type_var.get()
+        
+        # MACHINE: serve solo MMM
+        # GROUP: serve MMM + GGGG
+        # PART/ASSY: serve MMM + GGGG + opzionale variante
+        
+        if doc_type == "MACHINE":
+            # Disabilita GGGG e variante
+            self.gggg_menu.configure(state="disabled")
+            self.vvv_check.configure(state="disabled")
+            self.vvv_menu.configure(state="disabled")
+            self.use_vvv_var.set(False)
+        elif doc_type == "GROUP":
+            # Abilita GGGG, disabilita variante
+            self.gggg_menu.configure(state="normal")
+            self.vvv_check.configure(state="disabled")
+            self.vvv_menu.configure(state="disabled")
+            self.use_vvv_var.set(False)
+        else:  # PART/ASSY
+            # Abilita tutto
+            self.gggg_menu.configure(state="normal")
+            self.vvv_check.configure(state="normal")
+            self.vvv_menu.configure(state="normal")
+        
+        self._refresh_preview()
+
     def _refresh_preview(self):
-        # preview uses seq placeholder
+        """Mostra preview del codice."""
+        doc_type = self.doc_type_var.get()
         mmm = self.mmm_var.get() or "MMM"
         gggg = self.gggg_var.get() or "GGGG"
-        seq = 1
-        vvv = self.vvv_choice_var.get() if self.use_vvv_var.get() else ""
-        code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=self.use_vvv_var.get())
-        self.preview_label.configure(text=f"Preview: {code.replace('0001', '0000')}")
+        
+        if doc_type == "MACHINE":
+            code = build_machine_code(self.cfg, mmm, 1)
+            code = code.replace("V0001", "V0000")  # Preview placeholder
+        elif doc_type == "GROUP":
+            code = build_group_code(self.cfg, mmm, gggg, 1)
+            code = code.replace("V0001", "V0000")
+        else:  # PART/ASSY
+            seq = 1
+            vvv = self.vvv_choice_var.get() if self.use_vvv_var.get() else ""
+            code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=self.use_vvv_var.get())
+            code = code.replace("0001", "0000")
+        
+        self.preview_label.configure(text=f"Preview: {code}")
 
 
 
     def _show_next_code(self):
         """Mostra il prossimo codice disponibile senza consumare la sequenza."""
-        doc_type = self.doc_type_var.get() or "PART"
+        doc_type = self.doc_type_var.get()
         mmm = (self.mmm_var.get() or "").strip()
-        gggg = (self.gggg_var.get() or "").strip()
-        if not mmm or not gggg:
-            warn("Seleziona MMM e GGGG.")
+        
+        if not mmm:
+            warn("Seleziona MMM.")
             return
-        vvv = (self.vvv_choice_var.get() or "").strip().upper() if self.use_vvv_var.get() else ""
+        
         try:
-            seq = self.store.peek_seq(mmm, gggg, vvv, doc_type)
+            if doc_type == "MACHINE":
+                # Peek ver_counters per MACHINE
+                row = self.store.conn.execute(
+                    "SELECT next_ver FROM ver_counters WHERE mmm=? AND gggg='' AND doc_type='MACHINE';",
+                    (mmm,)
+                ).fetchone()
+                seq = int(row["next_ver"]) if row else 1
+                code = build_machine_code(self.cfg, mmm, seq)
+            
+            elif doc_type == "GROUP":
+                gggg = (self.gggg_var.get() or "").strip()
+                if not gggg:
+                    warn("Seleziona GGGG.")
+                    return
+                row = self.store.conn.execute(
+                    "SELECT next_ver FROM ver_counters WHERE mmm=? AND gggg=? AND doc_type='GROUP';",
+                    (mmm, gggg)
+                ).fetchone()
+                seq = int(row["next_ver"]) if row else 1
+                code = build_group_code(self.cfg, mmm, gggg, seq)
+            
+            else:  # PART/ASSY
+                gggg = (self.gggg_var.get() or "").strip()
+                if not gggg:
+                    warn("Seleziona GGGG.")
+                    return
+                vvv = (self.vvv_choice_var.get() or "").strip().upper() if self.use_vvv_var.get() else ""
+                seq = self.store.peek_seq(mmm, gggg, vvv, doc_type)
+                code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=self.use_vvv_var.get())
+            
+            self.preview_label.configure(text=f"Prossimo: {code}")
         except Exception as e:
-            warn(str(e))
-            return
-        code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=self.use_vvv_var.get())
-        self.preview_label.configure(text=f"Prossimo: {code}")
+            warn(f"Errore calcolo prossimo codice: {e}")
 
     def _browse_link_file(self):
         path = filedialog.askopenfilename(title='Seleziona file SolidWorks', filetypes=[('SolidWorks', '*.sldprt *.sldasm *.slddrw'), ('Tutti i file', '*.*')])
@@ -1611,68 +1708,151 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
                     set_readonly(dst_drw, readonly=False)
                 self.store.update_document(doc.code, file_wip_drw_path=str(dst_drw))
 
-    def _create_code_only(self):
-        mmm = self.mmm_var.get().strip()
-        gggg = self.gggg_var.get().strip()
-        if not mmm or not gggg:
-            warn("Seleziona MMM e GGGG.")
-            return
+    def _generate_document(self):
+        """Funzione unificata per generare qualsiasi tipo di documento."""
         doc_type = self.doc_type_var.get()
-        desc = self._require_desc_upper(self.desc_var.get(), what="descrizione documento")
+        file_mode = self.file_mode_var.get()
+        mmm = self.mmm_var.get().strip()
+        
+        # Validazione parametri base
+        if not mmm:
+            warn("Seleziona MMM.")
+            return
+        
+        desc = self._require_desc_upper(self.desc_var.get(), what="descrizione")
         if desc is None:
             return
         self.desc_var.set(desc)
-        vvv = self.vvv_choice_var.get().strip() if self.use_vvv_var.get() else ""
-        # variante per contatore: normalizzata (case, charset) se attiva
-        vvv_key = self.cfg.code.segments["VVV"].normalize_value(vvv) if vvv else ""
-        seq = self.store.allocate_seq(mmm, gggg, vvv_key, doc_type)
-        vvv = vvv_key
-        code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=self.use_vvv_var.get())
-
-        # compute expected wip paths if archive configured
-        wip_path = ""
-        wip_drw_path = ""
-        if self.cfg.solidworks.archive_root:
-            wip, rel, inrev, rev = archive_dirs(self.cfg.solidworks.archive_root, mmm, gggg)
-            wip_path = str(model_path(wip, code, doc_type))
-            wip_drw_path = str(drw_path(wip, code))
-
-        doc = Document(
-            id=0, code=code, doc_type=doc_type, mmm=mmm, gggg=gggg, seq=seq, vvv=vvv,
-            revision=0, state="WIP", description=desc,
-            file_wip_path=wip_path, file_rel_path="", file_inrev_path="",
-            file_wip_drw_path=wip_drw_path if self.create_drw_var.get() else "",
-            file_rel_drw_path="", file_inrev_drw_path="",
-            created_at="", updated_at=""
-        )
-
+        
+        # Validazione specifica per tipo
+        gggg = ""
+        vvv = ""
+        code = ""
+        seq = 0
+        
         try:
+            if doc_type == "MACHINE":
+                # MACHINE: solo MMM necessario
+                seq = self.store.allocate_ver_seq(mmm, "", "MACHINE")
+                code = build_machine_code(self.cfg, mmm, seq)
+                
+                # Paths
+                wip_path = ""
+                wip_drw_path = ""
+                if self.cfg.solidworks.archive_root:
+                    wip, rel, inrev, rev = archive_dirs_for_machine(self.cfg.solidworks.archive_root, mmm)
+                    wip_path = str(model_path(wip, code, "MACHINE"))
+                    wip_drw_path = str(drw_path(wip, code)) if file_mode == "model_drw" else ""
+                
+                doc = Document(
+                    id=0, code=code, doc_type="MACHINE", mmm=mmm, gggg="", seq=seq, vvv="",
+                    revision=0, state="WIP", description=desc,
+                    file_wip_path=wip_path, file_rel_path="", file_inrev_path="",
+                    file_wip_drw_path=wip_drw_path, file_rel_drw_path="", file_inrev_drw_path="",
+                    created_at="", updated_at=""
+                )
+                action_log = "CREATE_MACHINE"
+                
+            elif doc_type == "GROUP":
+                # GROUP: MMM + GGGG necessari
+                gggg = self.gggg_var.get().strip()
+                if not gggg:
+                    warn("Seleziona GGGG.")
+                    return
+                
+                seq = self.store.allocate_ver_seq(mmm, gggg, "GROUP")
+                code = build_group_code(self.cfg, mmm, gggg, seq)
+                
+                # Paths
+                wip_path = ""
+                wip_drw_path = ""
+                if self.cfg.solidworks.archive_root:
+                    wip, rel, inrev, rev = archive_dirs_for_group(self.cfg.solidworks.archive_root, mmm, gggg)
+                    wip_path = str(model_path(wip, code, "GROUP"))
+                    wip_drw_path = str(drw_path(wip, code)) if file_mode == "model_drw" else ""
+                
+                doc = Document(
+                    id=0, code=code, doc_type="GROUP", mmm=mmm, gggg=gggg, seq=seq, vvv="",
+                    revision=0, state="WIP", description=desc,
+                    file_wip_path=wip_path, file_rel_path="", file_inrev_path="",
+                    file_wip_drw_path=wip_drw_path, file_rel_drw_path="", file_inrev_drw_path="",
+                    created_at="", updated_at=""
+                )
+                action_log = "CREATE_GROUP"
+                
+            else:  # PART or ASSY
+                # PART/ASSY: MMM + GGGG + opzionale variante
+                gggg = self.gggg_var.get().strip()
+                if not gggg:
+                    warn("Seleziona GGGG.")
+                    return
+                
+                vvv = self.vvv_choice_var.get().strip() if self.use_vvv_var.get() else ""
+                vvv_key = self.cfg.code.segments["VVV"].normalize_value(vvv) if vvv else ""
+                seq = self.store.allocate_seq(mmm, gggg, vvv_key, doc_type)
+                vvv = vvv_key
+                code = build_code(self.cfg, mmm, gggg, seq, vvv=vvv, force_vvv=self.use_vvv_var.get())
+                
+                # Paths
+                wip_path = ""
+                wip_drw_path = ""
+                if self.cfg.solidworks.archive_root:
+                    wip, rel, inrev, rev = archive_dirs(self.cfg.solidworks.archive_root, mmm, gggg)
+                    wip_path = str(model_path(wip, code, doc_type))
+                    wip_drw_path = str(drw_path(wip, code)) if file_mode == "model_drw" else ""
+                
+                doc = Document(
+                    id=0, code=code, doc_type=doc_type, mmm=mmm, gggg=gggg, seq=seq, vvv=vvv,
+                    revision=0, state="WIP", description=desc,
+                    file_wip_path=wip_path, file_rel_path="", file_inrev_path="",
+                    file_wip_drw_path=wip_drw_path, file_rel_drw_path="", file_inrev_drw_path="",
+                    created_at="", updated_at=""
+                )
+                action_log = "CREATE_CODE"
+            
+            # Crea documento in DB
             self.store.add_document(doc)
-            # Import file esistente se selezionato
-            try:
-                if hasattr(self, 'link_file_var') and self.link_file_var.get().strip():
-                    self._import_linked_files_to_wip(doc, self.link_file_var.get().strip())
-            except Exception as imp_e:
-                warn(f"Codice creato, ma import file fallito: {imp_e}")
-                self._log_activity("CREATE_CODE", code=code, status="WARN", message=f"Creato ma import fallito: {imp_e}")
-            info(f"Creato codice: {code}")
-            self._log_activity("CREATE_CODE", code=code, status="OK", message=f"Creato in WIP ({doc.doc_type})")
+            
+            # Import file esistente se specificato
+            link_file = self.link_file_var.get().strip()
+            if link_file and doc_type in ("PART", "ASSY"):
+                try:
+                    self._import_linked_files_to_wip(doc, link_file)
+                except Exception as imp_e:
+                    warn(f"Codice creato, ma import file fallito: {imp_e}")
+                    self._log_activity(action_log, code=code, status="WARN", message=f"Creato ma import fallito: {imp_e}")
+            
+            # Crea file SolidWorks se richiesto
+            if file_mode in ("model", "model_drw"):
+                if link_file and doc_type in ("PART", "ASSY"):
+                    warn(f"Hai selezionato un file esistente: verrà importato, non creato da template.")
+                else:
+                    self._create_files_for_code(code, create_drw=(file_mode == "model_drw"), only_missing=False)
+            
+            info(f"Documento creato: {code}")
+            self._log_activity(action_log, code=code, status="OK", message=f"Creato {doc_type}")
             self._refresh_all()
+            
         except Exception as e:
-            self._log_activity("CREATE_CODE", code=code if 'code' in locals() else "", status="ERROR", message=str(e))
-            warn(f"Errore creazione codice: {e}")
+            self._log_activity(action_log if 'action_log' in locals() else "CREATE_ERROR", 
+                             code=code if code else "", status="ERROR", message=str(e))
+            warn(f"Errore creazione documento: {e}")
+
+    def _create_code_only(self):
+        """Deprecato: usa _generate_document()"""
+        warn("Funzione deprecata. Usa il pulsante GENERA.")
 
     def _create_code_and_files(self):
-        if hasattr(self, "link_file_var") and self.link_file_var.get().strip():
-            warn("Hai selezionato un file esistente: usa 'Crea solo codice (WIP)' per importarlo, oppure pulisci il campo per creare da template SolidWorks.")
-            return
+        """Deprecato: usa _generate_document()"""
+        warn("Funzione deprecata. Usa il pulsante GENERA.")
 
-        self._create_code_only()
-        # try create files for latest created (by code in description? easiest: select most recent from list)
-        docs = self.store.list_documents(include_obs=True)
-        if not docs:
-            return
-        self._create_files_for_code(docs[0].code)
+    def _create_machine_version(self):
+        """Deprecato: usa _generate_document()"""
+        warn("Funzione deprecata. Usa il pulsante GENERA.")
+    
+    def _create_group_version(self):
+        """Deprecato: usa _generate_document()"""
+        warn("Funzione deprecata. Usa il pulsante GENERA.")
 
     def _create_files_for_code(self, code: str, create_drw: bool | None = None, only_missing: bool = False):
         doc = self.store.get_document(code)
@@ -1817,6 +1997,8 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         self.hierarchy_tree = ttk.Treeview(tree_frame, show="tree", style="PDM.Hierarchy.Treeview")
         self.hierarchy_tree.tag_configure("part_node", foreground="#0B5ED7")
         self.hierarchy_tree.tag_configure("assy_node", foreground="#2E7D32")
+        self.hierarchy_tree.tag_configure("machine_node", foreground="#E67E22", font=("Segoe UI", tree_size, "bold"))
+        self.hierarchy_tree.tag_configure("group_node", foreground="#3498DB", font=("Segoe UI", tree_size, "bold"))
         yscroll = ttk.Scrollbar(tree_frame, orient="vertical", command=self.hierarchy_tree.yview)
         xscroll = ttk.Scrollbar(tree_frame, orient="horizontal", command=self.hierarchy_tree.xview)
         self.hierarchy_tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
@@ -1855,12 +2037,17 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
 
         docs = self.store.list_documents(include_obs=include_obs)
         docs_by_pair: dict[tuple[str, str], list[Document]] = defaultdict(list)
+        docs_machine: dict[str, list[Document]] = defaultdict(list)  # MACHINE per MMM
 
         for d in docs:
-            docs_by_pair[(d.mmm, d.gggg)].append(d)
+            if d.doc_type == "MACHINE":
+                docs_machine[d.mmm].append(d)
+            else:
+                docs_by_pair[(d.mmm, d.gggg)].append(d)
             machine_names.setdefault(d.mmm, "")
             groups_by_machine.setdefault(d.mmm, {})
-            groups_by_machine[d.mmm].setdefault(d.gggg, "")
+            if d.gggg:
+                groups_by_machine[d.mmm].setdefault(d.gggg, "")
 
         if not machine_names:
             tree.insert("", "end", text="(nessun MMM disponibile)")
@@ -1871,22 +2058,48 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             m_text = f"{mmm} - {m_name}" if m_name else mmm
             m_node = tree.insert("", "end", text=m_text, open=True)
 
+            # Mostra MACHINE versions sotto MMM
+            machine_docs = docs_machine.get(mmm, [])
+            if machine_docs:
+                machine_docs.sort(key=lambda d: d.code)
+                for d in machine_docs:
+                    model_path = d.best_model_path_for_state()
+                    drw_path = d.best_drw_path_for_state()
+                    d_node = tree.insert(m_node, "end", text=f"📦 {d.code}", values=(d.code,), tags=("machine_node",))
+                    tree.insert(
+                        d_node,
+                        "end",
+                        text=f"DESC: {d.description}",
+                    )
+                    tree.insert(
+                        d_node,
+                        "end",
+                        text=f"MODEL ({d.state}): {model_path if model_path else 'NON ASSOCIATO'}",
+                    )
+                    tree.insert(
+                        d_node,
+                        "end",
+                        text=f"DRW ({d.state}): {drw_path if drw_path else 'NON ASSOCIATO'}",
+                    )
+
             group_map = groups_by_machine.get(mmm, {})
             gggg_keys = sorted(group_map.keys())
             if not gggg_keys:
-                tree.insert(m_node, "end", text="(nessun GGGG)")
+                if not machine_docs:
+                    tree.insert(m_node, "end", text="(nessun GGGG o versione macchina)")
                 continue
 
             for gggg in gggg_keys:
                 g_name = (group_map.get(gggg) or "").strip()
                 dlist = docs_by_pair.get((mmm, gggg), [])
-                dlist.sort(key=lambda d: (0 if d.doc_type == "PART" else 1, d.code))
+                dlist.sort(key=lambda d: (0 if d.doc_type == "PART" else (1 if d.doc_type == "ASSY" else 2), d.code))
 
                 part_count = sum(1 for d in dlist if d.doc_type == "PART")
                 assy_count = sum(1 for d in dlist if d.doc_type == "ASSY")
+                group_count = sum(1 for d in dlist if d.doc_type == "GROUP")
 
                 g_base = f"{gggg} - {g_name}" if g_name else gggg
-                g_text = f"{g_base} (PART:{part_count} ASSY:{assy_count})"
+                g_text = f"{g_base} (GROUP:{group_count} PART:{part_count} ASSY:{assy_count})"
                 g_node = tree.insert(m_node, "end", text=g_text, open=True)
 
                 if not dlist:
@@ -1896,8 +2109,25 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
                 for d in dlist:
                     model_path = d.best_model_path_for_state()
                     drw_path = d.best_drw_path_for_state()
-                    tags = ("part_node",) if d.doc_type == "PART" else ("assy_node",)
-                    d_node = tree.insert(g_node, "end", text=d.code, values=(d.code,), tags=tags)
+                    if d.doc_type == "PART":
+                        tags = ("part_node",)
+                        icon = ""
+                    elif d.doc_type == "ASSY":
+                        tags = ("assy_node",)
+                        icon = ""
+                    elif d.doc_type == "GROUP":
+                        tags = ("group_node",)
+                        icon = "📁 "
+                    else:
+                        tags = ()
+                        icon = ""
+                    d_node = tree.insert(g_node, "end", text=f"{icon}{d.code}", values=(d.code,), tags=tags)
+                    if d.doc_type == "GROUP":
+                        tree.insert(
+                            d_node,
+                            "end",
+                            text=f"DESC: {d.description}",
+                        )
                     tree.insert(
                         d_node,
                         "end",

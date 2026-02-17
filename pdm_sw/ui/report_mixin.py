@@ -242,14 +242,19 @@ class ReportMixin:
 
         docs = self.store.list_documents(include_obs=include_obs)
         docs_by_pair: dict[tuple[str, str], list[Document]] = defaultdict(list)
+        docs_machine: dict[str, list[Document]] = defaultdict(list)
         for d in docs:
-            docs_by_pair[(d.mmm, d.gggg)].append(d)
+            if d.doc_type == "MACHINE":
+                docs_machine[d.mmm].append(d)
+            else:
+                docs_by_pair[(d.mmm, d.gggg)].append(d)
             machine_names.setdefault(d.mmm, "")
             groups_by_machine.setdefault(d.mmm, {})
-            groups_by_machine[d.mmm].setdefault(d.gggg, "")
+            if d.gggg:
+                groups_by_machine[d.mmm].setdefault(d.gggg, "")
 
         for pair in list(docs_by_pair.keys()):
-            docs_by_pair[pair].sort(key=lambda d: (0 if d.doc_type == "PART" else 1, d.code))
+            docs_by_pair[pair].sort(key=lambda d: (0 if d.doc_type == "PART" else (1 if d.doc_type == "ASSY" else 2), d.code))
 
         lines: list[str] = []
         lines.append("REPORT GENERALE GERARCHICO")
@@ -264,10 +269,25 @@ class ReportMixin:
             for mmm in sorted(machine_names.keys()):
                 m_name = (machine_names.get(mmm) or "").strip()
                 lines.append(f"MMM: {mmm} | Name: {m_name}")
+                
+                # MACHINE versions
+                machine_docs = docs_machine.get(mmm, [])
+                if machine_docs:
+                    machine_docs.sort(key=lambda d: d.code)
+                    for d in machine_docs:
+                        m_ok, d_ok = self._model_and_drawing_flags(d)
+                        m_val = "YES" if m_ok else "NO"
+                        d_val = "YES" if d_ok else "NO"
+                        lines.append(
+                            f"  [MACHINE] {d.code} | {d.state} | REV {int(d.revision):02d} | "
+                            f"M:{m_val} D:{d_val} | {d.description}"
+                        )
+                
                 group_map = groups_by_machine.get(mmm, {})
                 gggg_keys = sorted(group_map.keys())
                 if not gggg_keys:
-                    lines.append("  (nessun GGGG)")
+                    if not machine_docs:
+                        lines.append("  (nessun GGGG o versione macchina)")
                     lines.append("")
                     continue
                 for gggg in gggg_keys:
@@ -275,15 +295,17 @@ class ReportMixin:
                     dlist = docs_by_pair.get((mmm, gggg), [])
                     part_count = sum(1 for d in dlist if d.doc_type == "PART")
                     assy_count = sum(1 for d in dlist if d.doc_type == "ASSY")
-                    lines.append(f"  GGGG: {gggg} | Name: {g_name} | PART:{part_count} ASSY:{assy_count}")
+                    group_count = sum(1 for d in dlist if d.doc_type == "GROUP")
+                    lines.append(f"  GGGG: {gggg} | Name: {g_name} | GROUP:{group_count} PART:{part_count} ASSY:{assy_count}")
                     if not dlist:
                         lines.append("    (nessun codice)")
                     for d in dlist:
                         m_ok, d_ok = self._model_and_drawing_flags(d)
                         m_val = "YES" if m_ok else "NO"
                         d_val = "YES" if d_ok else "NO"
+                        prefix = "[GROUP] " if d.doc_type == "GROUP" else "    "
                         lines.append(
-                            f"    {d.code} | {d.doc_type} | {d.state} | REV {int(d.revision):02d} | "
+                            f"{prefix}{d.code} | {d.doc_type} | {d.state} | REV {int(d.revision):02d} | "
                             f"M:{m_val} D:{d_val} | {d.description}"
                         )
                     lines.append("")

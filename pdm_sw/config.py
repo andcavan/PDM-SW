@@ -55,6 +55,7 @@ class CodeConfig:
         "GGGG": SegmentRule(True, 4, "ALPHA", "UPPER"),
         "0000": SegmentRule(True, 4, "NUM", "UPPER"),
         "VVV": SegmentRule(True, 3, "ALNUM", "UPPER"),
+        "VNUM": SegmentRule(True, 4, "NUM", "UPPER"),
     })
 
 

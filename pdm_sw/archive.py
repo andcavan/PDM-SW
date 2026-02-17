@@ -13,7 +13,11 @@ from .models import Document, DocType
 
 
 def ext_for_doc_type(doc_type: DocType) -> str:
-    return ".sldprt" if doc_type == "PART" else ".sldasm"
+    if doc_type == "PART":
+        return ".sldprt"
+    elif doc_type in ("ASSY", "MACHINE", "GROUP"):
+        return ".sldasm"
+    return ".sldasm"
 
 
 def drw_ext() -> str:
@@ -40,6 +44,32 @@ def set_readonly(path: Path, readonly: bool = True) -> None:
 def archive_dirs(archive_root: str, mmm: str, gggg: str) -> Tuple[Path, Path, Path, Path]:
     root = Path(archive_root)
     base = root / mmm / gggg
+    wip = base / "wip"
+    rel = base / "rel"
+    inrev = base / "inrev"
+    rev = base / "rev"
+    for p in (wip, rel, inrev, rev):
+        ensure_dir(p)
+    return wip, rel, inrev, rev
+
+
+def archive_dirs_for_machine(archive_root: str, mmm: str) -> Tuple[Path, Path, Path, Path]:
+    """Cartelle archivio per MACHINE (solo MMM, senza GGGG)."""
+    root = Path(archive_root)
+    base = root / "MACHINES" / mmm
+    wip = base / "wip"
+    rel = base / "rel"
+    inrev = base / "inrev"
+    rev = base / "rev"
+    for p in (wip, rel, inrev, rev):
+        ensure_dir(p)
+    return wip, rel, inrev, rev
+
+
+def archive_dirs_for_group(archive_root: str, mmm: str, gggg: str) -> Tuple[Path, Path, Path, Path]:
+    """Cartelle archivio per GROUP (MMM_GGGG)."""
+    root = Path(archive_root)
+    base = root / "GROUPS" / mmm / gggg
     wip = base / "wip"
     rel = base / "rel"
     inrev = base / "inrev"

@@ -37,6 +37,12 @@
         "length": 3,
         "charset": "ALNUM",
         "case": "UPPER"
+      },
+      "VNUM": {
+        "enabled": true,
+        "length": 4,
+        "charset": "NUM",
+        "case": "UPPER"
       }
     }
   },

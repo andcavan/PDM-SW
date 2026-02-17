@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional, Literal
 
 
-DocType = Literal["PART", "ASSY"]
+DocType = Literal["PART", "ASSY", "MACHINE", "GROUP"]
 State = Literal["WIP", "REL", "IN_REV", "OBS"]
 
 
