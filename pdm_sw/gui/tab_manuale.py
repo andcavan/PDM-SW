@@ -24,7 +24,7 @@ class TabManuale(BaseTab):
 
         ctk.CTkLabel(
             self.root,
-            text="Manuale Rapido (Rev v50.2)",
+            text="Manuale Rapido (Rev v50.7)",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).pack(anchor="w", padx=12, pady=(12, 8))
 
@@ -61,8 +61,14 @@ class TabManuale(BaseTab):
             "- Pubblica la macro bootstrap per la workspace corrente.\n"
             "\n"
             "5) Codifica\n"
-            "- Crea solo codice (WIP) oppure codice + file da template.\n"
-            "- Importa file esistenti (.sldprt/.sldasm/.slddrw) nel WIP.\n"
+            "- Supporta 4 tipi documento: MACHINE (MMM-V####), GROUP (MMM_GGGG-V####), PART (MMM_GGGG-0001), ASSY (MMM_GGGG-9999).\n"
+            "- 3 modalità creazione file:\n"
+            "  * Solo codice (no file): crea record DB in WIP senza generare file SolidWorks.\n"
+            "  * Modello (da template): genera file .sldprt o .sldasm da template configurato.\n"
+            "  * Modello + Disegno: genera modello + disegno .slddrw automatico.\n"
+            "- Import file esistente: seleziona file .sldprt/.sldasm/.slddrw esistente da importare in WIP.\n"
+            "  * Se selezioni .slddrw, il sistema cerca automaticamente il modello associato (.sldprt o .sldasm).\n"
+            "  * Opzione 'Importa anche DRW': se presente file .slddrw con stesso nome del modello, viene importato automaticamente.\n"
             "\n"
             "6) Gerarchia\n"
             "- Vista ad albero MMM -> GGGG -> CODICE.\n"
@@ -108,6 +114,15 @@ class TabManuale(BaseTab):
             "6) Salva e chiudi VBA.\n"
             "7) (Consigliato) Aggiungi pulsante toolbar:\n"
             "   Strumenti > Personalizza > Comandi > Macro > Esegui Macro.\n"
+            "\n"
+            "Funzionalita macro SolidWorks:\n"
+            "- Tab CODIFICA: genera codici per MACHINE/GROUP/PART/ASSY direttamente da SolidWorks.\n"
+            "  * Stesse funzionalita del PDM desktop: 4 tipi documento, 3 modalita file, import file esistenti.\n"
+            "  * Modalita 'Modello (da template)': crea nuovo file da template configurato.\n"
+            "  * Modalita 'SaveAs': salva il documento attivo in SolidWorks come nuovo codice WIP.\n"
+            "  * Import file: seleziona file esistente da importare con opzione auto DRW.\n"
+            "- Tab WORKFLOW: transizioni stato WIP/REL/IN_REV/OBS con note obbligatorie (come desktop).\n"
+            "- Workspace bloccata: la macro lavora con la workspace specificata al momento della pubblicazione.\n"
             "\n"
             "Build EXE payload (opzionale ma consigliato):\n"
             "1) Apri:\n"
