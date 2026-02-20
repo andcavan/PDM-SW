@@ -111,6 +111,10 @@ class Store:
             state TEXT NOT NULL DEFAULT 'WIP',
             obs_prev_state TEXT NOT NULL DEFAULT '',
             description TEXT NOT NULL DEFAULT '',
+            checked_out INTEGER NOT NULL DEFAULT 0,
+            checkout_owner_user TEXT NOT NULL DEFAULT '',
+            checkout_owner_host TEXT NOT NULL DEFAULT '',
+            checkout_at TEXT NOT NULL DEFAULT '',
 
             file_wip_path TEXT NOT NULL DEFAULT '',
             file_rel_path TEXT NOT NULL DEFAULT '',
@@ -130,6 +134,14 @@ class Store:
             cols = [r["name"] for r in self.conn.execute("PRAGMA table_info(documents);").fetchall()]
             if "obs_prev_state" not in cols:
                 c.execute("ALTER TABLE documents ADD COLUMN obs_prev_state TEXT NOT NULL DEFAULT '';")
+            if "checked_out" not in cols:
+                c.execute("ALTER TABLE documents ADD COLUMN checked_out INTEGER NOT NULL DEFAULT 0;")
+            if "checkout_owner_user" not in cols:
+                c.execute("ALTER TABLE documents ADD COLUMN checkout_owner_user TEXT NOT NULL DEFAULT '';")
+            if "checkout_owner_host" not in cols:
+                c.execute("ALTER TABLE documents ADD COLUMN checkout_owner_host TEXT NOT NULL DEFAULT '';")
+            if "checkout_at" not in cols:
+                c.execute("ALTER TABLE documents ADD COLUMN checkout_at TEXT NOT NULL DEFAULT '';")
         except Exception:
             pass
 
@@ -369,13 +381,18 @@ class Store:
             """
             INSERT INTO documents(
                 code, doc_type, mmm, gggg, seq, vvv, revision, state, description,
+                checked_out, checkout_owner_user, checkout_owner_host, checkout_at,
                 file_wip_path, file_rel_path, file_inrev_path,
                 file_wip_drw_path, file_rel_drw_path, file_inrev_drw_path,
                 created_at, updated_at
-            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """,
             (
                 doc.code, doc.doc_type, doc.mmm, doc.gggg, doc.seq, doc.vvv, doc.revision, doc.state, doc.description,
+                (1 if bool(getattr(doc, "checked_out", False)) else 0),
+                str(getattr(doc, "checkout_owner_user", "") or ""),
+                str(getattr(doc, "checkout_owner_host", "") or ""),
+                str(getattr(doc, "checkout_at", "") or ""),
                 doc.file_wip_path, doc.file_rel_path, doc.file_inrev_path,
                 doc.file_wip_drw_path, doc.file_rel_drw_path, doc.file_inrev_drw_path,
                 now, now
@@ -399,6 +416,153 @@ class Store:
         self.conn.execute(sql, vals)
         self.conn.commit()
         self._mark_dirty()
+
+    def checkout_document(self, code: str, owner_user: str, owner_host: str) -> Tuple[bool, str, Dict[str, str]]:
+        code_u = (code or "").strip()
+        usr = (owner_user or "").strip()
+        host = (owner_host or "").strip()
+        if not code_u:
+            return False, "Codice mancante.", {}
+
+        now = _now()
+        cur = self.conn.cursor()
+        try:
+            cur.execute("BEGIN IMMEDIATE;")
+            row = cur.execute(
+                """
+                SELECT code, state, checked_out, checkout_owner_user, checkout_owner_host, checkout_at
+                FROM documents
+                WHERE code=?;
+                """,
+                (code_u,),
+            ).fetchone()
+            if row is None:
+                self.conn.commit()
+                return False, "Documento non trovato.", {}
+
+            state = str(row["state"] or "").strip().upper()
+            if state in ("REL", "OBS"):
+                self.conn.commit()
+                return False, f"Checkout non consentito su stato {state}.", {}
+
+            already = int(row["checked_out"] or 0) != 0
+            holder = {
+                "code": str(row["code"] or ""),
+                "checkout_owner_user": str(row["checkout_owner_user"] or ""),
+                "checkout_owner_host": str(row["checkout_owner_host"] or ""),
+                "checkout_at": str(row["checkout_at"] or ""),
+            }
+            if already:
+                holder_user = holder["checkout_owner_user"]
+                if holder_user and usr and holder_user == usr:
+                    cur.execute(
+                        """
+                        UPDATE documents
+                        SET checked_out=1, checkout_owner_user=?, checkout_owner_host=?, checkout_at=?, updated_at=?
+                        WHERE code=?;
+                        """,
+                        (usr, host, now, now, code_u),
+                    )
+                    self.conn.commit()
+                    self._mark_dirty()
+                    return True, "CHECKOUT_REFRESHED", holder
+                self.conn.commit()
+                return False, "CHECKOUT_BY_OTHER", holder
+
+            cur.execute(
+                """
+                UPDATE documents
+                SET checked_out=1, checkout_owner_user=?, checkout_owner_host=?, checkout_at=?, updated_at=?
+                WHERE code=?;
+                """,
+                (usr, host, now, now, code_u),
+            )
+            self.conn.commit()
+            self._mark_dirty()
+            return True, "CHECKOUT_OK", {}
+        except Exception as e:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            return False, f"CHECKOUT_ERROR: {e}", {}
+
+    def checkin_document(self, code: str, owner_user: str, force: bool = False) -> Tuple[bool, str, Dict[str, str]]:
+        code_u = (code or "").strip()
+        usr = (owner_user or "").strip()
+        if not code_u:
+            return False, "Codice mancante.", {}
+
+        now = _now()
+        cur = self.conn.cursor()
+        try:
+            cur.execute("BEGIN IMMEDIATE;")
+            row = cur.execute(
+                """
+                SELECT code, checked_out, checkout_owner_user, checkout_owner_host, checkout_at
+                FROM documents
+                WHERE code=?;
+                """,
+                (code_u,),
+            ).fetchone()
+            if row is None:
+                self.conn.commit()
+                return False, "Documento non trovato.", {}
+
+            already = int(row["checked_out"] or 0) != 0
+            if not already:
+                self.conn.commit()
+                return True, "CHECKIN_ALREADY", {}
+
+            holder = {
+                "code": str(row["code"] or ""),
+                "checkout_owner_user": str(row["checkout_owner_user"] or ""),
+                "checkout_owner_host": str(row["checkout_owner_host"] or ""),
+                "checkout_at": str(row["checkout_at"] or ""),
+            }
+            holder_user = holder["checkout_owner_user"]
+            if (not force) and holder_user and usr and holder_user != usr:
+                self.conn.commit()
+                return False, "CHECKOUT_BY_OTHER", holder
+            if (not force) and holder_user and (not usr):
+                self.conn.commit()
+                return False, "CHECKIN_OWNER_REQUIRED", holder
+
+            cur.execute(
+                """
+                UPDATE documents
+                SET checked_out=0, checkout_owner_user='', checkout_owner_host='', checkout_at='', updated_at=?
+                WHERE code=?;
+                """,
+                (now, code_u),
+            )
+            self.conn.commit()
+            self._mark_dirty()
+            return True, "CHECKIN_OK", holder
+        except Exception as e:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            return False, f"CHECKIN_ERROR: {e}", {}
+
+    def clear_document_checkout(self, code: str) -> bool:
+        code_u = (code or "").strip()
+        if not code_u:
+            return False
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            UPDATE documents
+            SET checked_out=0, checkout_owner_user='', checkout_owner_host='', checkout_at='', updated_at=?
+            WHERE code=?;
+            """,
+            (_now(), code_u),
+        )
+        self.conn.commit()
+        if cur.rowcount:
+            self._mark_dirty()
+        return bool(cur.rowcount)
 
     def list_documents(self, include_obs: bool = False) -> List[Document]:
         if include_obs:
@@ -468,6 +632,10 @@ class Store:
             state=str(r["state"]),
             obs_prev_state=str(r["obs_prev_state"] if "obs_prev_state" in r.keys() else ""),
             description=str(r["description"] or ""),
+            checked_out=(int(r["checked_out"] or 0) != 0) if "checked_out" in r.keys() else False,
+            checkout_owner_user=str(r["checkout_owner_user"] if "checkout_owner_user" in r.keys() else ""),
+            checkout_owner_host=str(r["checkout_owner_host"] if "checkout_owner_host" in r.keys() else ""),
+            checkout_at=str(r["checkout_at"] if "checkout_at" in r.keys() else ""),
 
             file_wip_path=str(r["file_wip_path"] or ""),
             file_rel_path=str(r["file_rel_path"] or ""),

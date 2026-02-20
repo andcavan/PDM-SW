@@ -1,0 +1,122 @@
+Archive cleanup start: 2026-02-20T18:35:34
+Root: C:\ArchivioCAD
+DIR C:\ArchivioCAD\QQQ\1000\inrev | files=1
+  MOVE C:\ArchivioCAD\QQQ\1000\inrev\~$QQQ_1000-0003_R00__INREV.sldprt -> C:\ArchivioCAD\QQQ\1000\IN_REV\~$QQQ_1000-0003_R00__INREV.sldprt
+DIR C:\ArchivioCAD\AAA\1000\wip | files=7
+  MOVE C:\ArchivioCAD\AAA\1000\wip\~$AAA_1000-0001.SLDDRW -> C:\ArchivioCAD\AAA\1000\~$AAA_1000-0001.SLDDRW
+  MOVE C:\ArchivioCAD\AAA\1000\wip\~$AAA_1000-0001.SLDPRT -> C:\ArchivioCAD\AAA\1000\~$AAA_1000-0001.SLDPRT
+  MOVE C:\ArchivioCAD\AAA\1000\wip\~$AAA_1000-0002.SLDPRT -> C:\ArchivioCAD\AAA\1000\~$AAA_1000-0002.SLDPRT
+  MOVE C:\ArchivioCAD\AAA\1000\wip\~$AAA_1000-9998.SLDASM -> C:\ArchivioCAD\AAA\1000\~$AAA_1000-9998.SLDASM
+  MOVE C:\ArchivioCAD\AAA\1000\wip\~$AAA_1000-9998.SLDDRW -> C:\ArchivioCAD\AAA\1000\~$AAA_1000-9998.SLDDRW
+  MOVE C:\ArchivioCAD\AAA\1000\wip\~$AAA_1000-9999.SLDASM -> C:\ArchivioCAD\AAA\1000\~$AAA_1000-9999.SLDASM
+  MOVE C:\ArchivioCAD\AAA\1000\wip\~$AAA_1000-9999.SLDDRW -> C:\ArchivioCAD\AAA\1000\~$AAA_1000-9999.SLDDRW
+DIR C:\ArchivioCAD\QQQ\1000\rel | files=12
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0003.slddrw -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0003__LEGACY_20260220_183534.slddrw
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0003.sldprt -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0003__LEGACY_20260220_183534.sldprt
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0005.slddrw -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0005__LEGACY_20260220_183534.slddrw
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0005.sldprt -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0005__LEGACY_20260220_183534.sldprt
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0008.sldprt -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0008__LEGACY_20260220_183534.sldprt
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0012.slddrw -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0012__LEGACY_20260220_183534.slddrw
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-0012.sldprt -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0012__LEGACY_20260220_183534.sldprt
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-9999.sldasm -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-9999__LEGACY_20260220_183534.sldasm
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\1000\rel\QQQ_1000-9999.slddrw -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-9999__LEGACY_20260220_183534.slddrw
+  MOVE C:\ArchivioCAD\QQQ\1000\rel\~$QQQ_1000-0008.sldprt -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0008.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rel\~$QQQ_1000-0010.sldprt -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0010.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rel\~$QQQ_1000-9998.sldasm -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-9998.sldasm
+DIR C:\ArchivioCAD\QQQ\1000\rev | files=13
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R00.slddrw | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0001_R00.slddrw'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R00.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0001_R00.sldprt'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R01.slddrw | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0001_R01.slddrw'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R01.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0001_R01.sldprt'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0009_R00.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0009_R00.sldprt'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0009_R01.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0009_R01.sldprt'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0010_R00.slddrw | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0010_R00.slddrw'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0010_R00.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0010_R00.sldprt'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0012_R00.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0012_R00.sldprt'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R00.slddrw | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0013_R00.slddrw'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R00.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0013_R00.sldprt'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R01.slddrw | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0013_R01.slddrw'
+  ERROR C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R01.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\1000\\rev\\QQQ_1000-0013_R01.sldprt'
+DIR C:\ArchivioCAD\QQQ\1000\wip | files=10
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-0006.SLDPRT -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0006.SLDPRT
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\QQQ_1000-0007.SLDPRT -> C:\ArchivioCAD\QQQ\1000\QQQ_1000-0007.SLDPRT
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-0003.SLDDRW -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0003.SLDDRW
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-0003.SLDPRT -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0003.SLDPRT
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-0005.SLDDRW -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0005.SLDDRW
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-0005.SLDPRT -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0005.SLDPRT
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-0010.SLDDRW -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0010.SLDDRW
+  DELETE_DUP C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-0010.SLDPRT -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-0010.SLDPRT
+  MOVE C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-9997.SLDDRW -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-9997.SLDDRW
+  DELETE_DUP C:\ArchivioCAD\QQQ\1000\wip\~$QQQ_1000-9998.SLDASM -> C:\ArchivioCAD\QQQ\1000\~$QQQ_1000-9998.SLDASM
+DIR C:\ArchivioCAD\QQQ\2000\rel | files=1
+  ERROR C:\ArchivioCAD\QQQ\2000\rel\QQQ_2000-0001.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\QQQ\\2000\\rel\\QQQ_2000-0001.sldprt'
+DIR C:\ArchivioCAD\SSS\0200\rel | files=1
+  MOVE C:\ArchivioCAD\SSS\0200\rel\~$SSS_0200-0001.sldprt -> C:\ArchivioCAD\SSS\0200\~$SSS_0200-0001.sldprt
+DIR C:\ArchivioCAD\SSS\0200\rev | files=2
+  ERROR C:\ArchivioCAD\SSS\0200\rev\SSS_0200-0002_R00.slddrw | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\SSS\\0200\\rev\\SSS_0200-0002_R00.slddrw'
+  ERROR C:\ArchivioCAD\SSS\0200\rev\SSS_0200-0002_R00.sldprt | PermissionError: [WinError 5] Accesso negato: 'C:\\ArchivioCAD\\SSS\\0200\\rev\\SSS_0200-0002_R00.sldprt'
+RMDIR C:\ArchivioCAD\GROUPS\AAA\1000\inrev
+RMDIR C:\ArchivioCAD\GROUPS\QQQ\1000\inrev
+RMDIR C:\ArchivioCAD\GROUPS\AAA\1000\rel
+RMDIR C:\ArchivioCAD\GROUPS\AAA\1000\rev
+RMDIR C:\ArchivioCAD\GROUPS\AAA\1000\wip
+RMDIR C:\ArchivioCAD\GROUPS\QQQ\1000\rel
+RMDIR C:\ArchivioCAD\GROUPS\QQQ\1000\rev
+RMDIR C:\ArchivioCAD\GROUPS\QQQ\1000\wip
+RMDIR C:\ArchivioCAD\MACHINES\AAA\inrev
+RMDIR C:\ArchivioCAD\MACHINES\QQQ\inrev
+RMDIR C:\ArchivioCAD\MACHINES\AAA\rel
+RMDIR C:\ArchivioCAD\MACHINES\AAA\rev
+RMDIR C:\ArchivioCAD\MACHINES\AAA\wip
+RMDIR C:\ArchivioCAD\MACHINES\QQQ\rel
+RMDIR C:\ArchivioCAD\MACHINES\QQQ\rev
+RMDIR C:\ArchivioCAD\MACHINES\QQQ\wip
+RMDIR C:\ArchivioCAD\AAA\0100\inrev
+RMDIR C:\ArchivioCAD\AAA\1000\inrev
+RMDIR C:\ArchivioCAD\QQQ\1000\inrev
+RMDIR C:\ArchivioCAD\QQQ\2000\inrev
+RMDIR C:\ArchivioCAD\SSS\0100\inrev
+RMDIR C:\ArchivioCAD\SSS\0200\inrev
+RMDIR C:\ArchivioCAD\SSS\1000\inrev
+RMDIR C:\ArchivioCAD\AAA\0100\rel
+RMDIR C:\ArchivioCAD\AAA\0100\rev
+RMDIR C:\ArchivioCAD\AAA\0100\wip
+RMDIR C:\ArchivioCAD\AAA\1000\rel
+RMDIR C:\ArchivioCAD\AAA\1000\rev
+RMDIR C:\ArchivioCAD\AAA\1000\wip
+RMDIR C:\ArchivioCAD\QQQ\1000\rel
+RMDIR C:\ArchivioCAD\QQQ\1000\wip
+RMDIR C:\ArchivioCAD\QQQ\2000\rev
+RMDIR C:\ArchivioCAD\QQQ\2000\wip
+RMDIR C:\ArchivioCAD\SSS\0100\rel
+RMDIR C:\ArchivioCAD\SSS\0100\rev
+RMDIR C:\ArchivioCAD\SSS\0100\wip
+RMDIR C:\ArchivioCAD\SSS\0200\rel
+RMDIR C:\ArchivioCAD\SSS\0200\wip
+RMDIR C:\ArchivioCAD\SSS\1000\rel
+RMDIR C:\ArchivioCAD\SSS\1000\rev
+RMDIR C:\ArchivioCAD\SSS\1000\wip
+RMDIR C:\ArchivioCAD\AAA\inrev
+RMDIR C:\ArchivioCAD\QQQ\inrev
+RMDIR C:\ArchivioCAD\AAA\rel
+RMDIR C:\ArchivioCAD\AAA\rev
+RMDIR C:\ArchivioCAD\AAA\wip
+RMDIR C:\ArchivioCAD\QQQ\rel
+RMDIR C:\ArchivioCAD\QQQ\rev
+RMDIR C:\ArchivioCAD\QQQ\wip
+RMDIR C:\ArchivioCAD\MACHINES\AAA
+RMDIR C:\ArchivioCAD\MACHINES\QQQ
+RMDIR C:\ArchivioCAD\MACHINES
+RMDIR C:\ArchivioCAD\GROUPS\AAA\1000
+RMDIR C:\ArchivioCAD\GROUPS\QQQ\1000
+RMDIR C:\ArchivioCAD\GROUPS\AAA
+RMDIR C:\ArchivioCAD\GROUPS\QQQ
+RMDIR C:\ArchivioCAD\GROUPS
+
+SUMMARY
+legacy_dirs_scanned=52
+moved=20
+deleted_dup=2
+kept_collision=9
+removed_dirs=57
+errors=16

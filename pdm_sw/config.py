@@ -65,6 +65,16 @@ class SolidWorksConfig:
     template_part: str = ""
     template_assembly: str = ""
     template_drawing: str = ""
+    sldreg_enabled: bool = False
+    sldreg_file: str = ""
+    sldreg_cleanup_before_import: bool = True
+    sldreg_restore_system_options: bool = True
+    sldreg_restore_toolbar_layout: bool = True
+    sldreg_restore_toolbar_mode: str = "all"
+    sldreg_restore_keyboard_shortcuts: bool = True
+    sldreg_restore_mouse_gestures: bool = True
+    sldreg_restore_menu_customizations: bool = True
+    sldreg_restore_saved_views: bool = True
     property_map: Dict[str, str] = field(default_factory=dict)  # legacy: pdm_field -> SW_PROP
     # Nuovo: lista di mapping, supporta più proprietà SW per lo stesso campo PDM
     property_mappings: List[Dict[str, str]] = field(default_factory=list)  # [{pdm_field, sw_prop}]
@@ -135,6 +145,16 @@ class AppConfig:
             template_part=str(sw_d.get("template_part", "")),
             template_assembly=str(sw_d.get("template_assembly", "")),
             template_drawing=str(sw_d.get("template_drawing", "")),
+            sldreg_enabled=bool(sw_d.get("sldreg_enabled", False)),
+            sldreg_file=str(sw_d.get("sldreg_file", "")),
+            sldreg_cleanup_before_import=bool(sw_d.get("sldreg_cleanup_before_import", True)),
+            sldreg_restore_system_options=bool(sw_d.get("sldreg_restore_system_options", True)),
+            sldreg_restore_toolbar_layout=bool(sw_d.get("sldreg_restore_toolbar_layout", True)),
+            sldreg_restore_toolbar_mode=str(sw_d.get("sldreg_restore_toolbar_mode", "all")),
+            sldreg_restore_keyboard_shortcuts=bool(sw_d.get("sldreg_restore_keyboard_shortcuts", True)),
+            sldreg_restore_mouse_gestures=bool(sw_d.get("sldreg_restore_mouse_gestures", True)),
+            sldreg_restore_menu_customizations=bool(sw_d.get("sldreg_restore_menu_customizations", True)),
+            sldreg_restore_saved_views=bool(sw_d.get("sldreg_restore_saved_views", True)),
             property_map=dict(sw_d.get("property_map", {}) or {}),
             property_mappings=list(sw_d.get("property_mappings", []) or []),
             description_prop=str(sw_d.get("description_prop", "DESCRIZIONE")),

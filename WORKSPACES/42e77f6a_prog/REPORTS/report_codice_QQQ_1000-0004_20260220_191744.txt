@@ -1,0 +1,32 @@
+REPORT CODICE: QQQ_1000-0004
+Generated: 2026-02-20 19:17:44
+
+[ANAGRAFICA]
+Code: QQQ_1000-0004
+Doc type: PART
+State: WIP
+Revision: 00
+MMM/GGGG/VVV: QQQ/1000/
+Seq: 0004
+Description: DESCRIZIONE TEMP
+OBS previous state: 
+Created at: 2026-02-06T23:51:43
+Updated at: 2026-02-20T18:31:51
+
+[FILE]
+Best model path: C:\ArchivioCAD\QQQ\1000\QQQ_1000-0004.sldprt
+Best drawing path: C:\ArchivioCAD\QQQ\1000\QQQ_1000-0004.slddrw
+Model exists (M): YES
+Drawing exists (D): YES
+MODEL WIP [YES]: C:\ArchivioCAD\QQQ\1000\QQQ_1000-0004.sldprt
+MODEL REL [YES]: C:\ArchivioCAD\QQQ\1000\QQQ_1000-0004.sldprt
+MODEL INREV [NO]: 
+DRW WIP [YES]: C:\ArchivioCAD\QQQ\1000\QQQ_1000-0004.slddrw
+DRW REL [YES]: C:\ArchivioCAD\QQQ\1000\QQQ_1000-0004.slddrw
+DRW INREV [NO]: 
+
+[CUSTOM VALUES]
+(none)
+
+[STATE NOTES]
+(none)

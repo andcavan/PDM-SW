@@ -76,6 +76,8 @@ class TabOperativo(BaseTab):
         self.wf_btn_cancel = None
         self.wf_btn_obsolete = None
         self.wf_btn_restore_obs = None
+        self.wf_btn_checkout = None
+        self.wf_btn_checkin = None
         self.wf_info = None
         
         self._build_ui()
@@ -151,6 +153,20 @@ class TabOperativo(BaseTab):
             text="COPIA CODICE",
             width=130,
             command=lambda: self.app._copy_selected_code_to_new_wip()
+        ).pack(side="left", padx=6, pady=6)
+
+        ctk.CTkButton(
+            actions,
+            text="CHECK-OUT",
+            width=120,
+            command=lambda: self.app._checkout_selected_document()
+        ).pack(side="left", padx=6, pady=6)
+
+        ctk.CTkButton(
+            actions,
+            text="CHECK-IN",
+            width=120,
+            command=lambda: self.app._checkin_selected_document()
         ).pack(side="left", padx=6, pady=6)
         
         ctk.CTkButton(
@@ -345,6 +361,8 @@ class TabOperativo(BaseTab):
         row1.pack(fill="x", pady=(0, 4))
         row2 = ctk.CTkFrame(frame, fg_color="transparent")
         row2.pack(fill="x", pady=(0, 6))
+        row3 = ctk.CTkFrame(frame, fg_color="transparent")
+        row3.pack(fill="x", pady=(0, 6))
         
         if compact:
             self.wf_btn_release = ctk.CTkButton(
@@ -377,6 +395,16 @@ class TabOperativo(BaseTab):
                 text="RIPRISTINA OBS",
                 command=lambda: self.app._wf_restore_obs()
             )
+            self.wf_btn_checkout = ctk.CTkButton(
+                row3,
+                text="CHECK-OUT",
+                command=lambda: self.app._checkout_selected_document()
+            )
+            self.wf_btn_checkin = ctk.CTkButton(
+                row3,
+                text="CHECK-IN",
+                command=lambda: self.app._checkin_selected_document()
+            )
         else:
             self.wf_btn_release = ctk.CTkButton(
                 row1,
@@ -408,6 +436,16 @@ class TabOperativo(BaseTab):
                 text="OBS -> Ripristina",
                 command=lambda: self.app._wf_restore_obs()
             )
+            self.wf_btn_checkout = ctk.CTkButton(
+                row3,
+                text="CHECK-OUT",
+                command=lambda: self.app._checkout_selected_document()
+            )
+            self.wf_btn_checkin = ctk.CTkButton(
+                row3,
+                text="CHECK-IN",
+                command=lambda: self.app._checkin_selected_document()
+            )
         
         # Layout pulsanti
         if compact:
@@ -415,6 +453,8 @@ class TabOperativo(BaseTab):
             row1.grid_columnconfigure(1, weight=1)
             row2.grid_columnconfigure(0, weight=1)
             row2.grid_columnconfigure(1, weight=1)
+            row3.grid_columnconfigure(0, weight=1)
+            row3.grid_columnconfigure(1, weight=1)
             
             self.wf_btn_release.grid(row=0, column=0, sticky="ew", padx=4, pady=3)
             self.wf_btn_create_rev.grid(row=0, column=1, sticky="ew", padx=4, pady=3)
@@ -423,10 +463,14 @@ class TabOperativo(BaseTab):
             self.wf_btn_cancel.grid(row=0, column=0, columnspan=2, sticky="ew", padx=4, pady=3)
             self.wf_btn_obsolete.grid(row=1, column=0, sticky="ew", padx=4, pady=3)
             self.wf_btn_restore_obs.grid(row=1, column=1, sticky="ew", padx=4, pady=3)
+            self.wf_btn_checkout.grid(row=0, column=0, sticky="ew", padx=4, pady=3)
+            self.wf_btn_checkin.grid(row=0, column=1, sticky="ew", padx=4, pady=3)
         else:
             for b in (self.wf_btn_release, self.wf_btn_create_rev, self.wf_btn_approve):
                 b.pack(side="left", padx=4, pady=4)
             for b in (self.wf_btn_cancel, self.wf_btn_obsolete, self.wf_btn_restore_obs):
+                b.pack(side="left", padx=4, pady=4)
+            for b in (self.wf_btn_checkout, self.wf_btn_checkin):
                 b.pack(side="left", padx=4, pady=4)
         
         # Info textbox
@@ -577,7 +621,7 @@ class TabOperativo(BaseTab):
         for d in docs:
             m_ok, d_ok = self.app._model_and_drawing_flags(d)
             
-            base = [m_ok, d_ok, d.code, d.doc_type, d.revision, d.state, d.description]
+            base = [m_ok, d_ok, d.code, d.doc_type, d.revision, d.state, self.app._checkout_table_value(d), d.description]
             extra = [sw_values.get(d.code, {}).get(p, "") for p in props]
             row_tag = self.app._state_row_tag(d.state)
             
@@ -613,17 +657,24 @@ class TabOperativo(BaseTab):
             _set("wf_btn_cancel", False)
             _set("wf_btn_obsolete", False)
             _set("wf_btn_restore_obs", False)
+            _set("wf_btn_checkout", False)
+            _set("wf_btn_checkin", False)
             return
-        
+
         state = str(getattr(doc, "state", "") or "").strip().upper()
         prev_state = str(getattr(doc, "obs_prev_state", "") or "").strip().upper()
-        
-        _set("wf_btn_release", state == "WIP")
+        is_checked_out = bool(getattr(doc, "checked_out", False))
+        is_checkout_mine = self.app._is_doc_checked_out_by_me(doc)
+        can_checkout_state = state in ("WIP", "IN_REV")
+
+        _set("wf_btn_release", state == "WIP" and is_checked_out and is_checkout_mine)
         _set("wf_btn_create_rev", state == "REL")
-        _set("wf_btn_approve", state == "IN_REV")
-        _set("wf_btn_cancel", state == "IN_REV")
+        _set("wf_btn_approve", state == "IN_REV" and is_checked_out and is_checkout_mine)
+        _set("wf_btn_cancel", state == "IN_REV" and is_checked_out and is_checkout_mine)
         _set("wf_btn_obsolete", state in ("WIP", "REL", "IN_REV"))
         _set("wf_btn_restore_obs", state == "OBS" and prev_state in ("WIP", "REL", "IN_REV"))
+        _set("wf_btn_checkout", can_checkout_state and ((not is_checked_out) or is_checkout_mine))
+        _set("wf_btn_checkin", can_checkout_state and is_checked_out and is_checkout_mine)
     
     def refresh_workflow(self):
         """
@@ -642,9 +693,10 @@ class TabOperativo(BaseTab):
             self.wf_info.delete("1.0", "end")
             self._update_workflow_buttons(None)
             return
-        
+
         self._update_workflow_buttons(doc)
-        self.wf_state_var.set(f"Stato: {doc.state}  Rev: {doc.revision:02d}")
+        checkout_label = self.app._checkout_status_label(doc)
+        self.wf_state_var.set(f"Stato: {doc.state}  Rev: {doc.revision:02d}  | {checkout_label}")
         self.wf_info.delete("1.0", "end")
         
         def _shown_path(path_s: str) -> str:
@@ -660,7 +712,10 @@ class TabOperativo(BaseTab):
         self.wf_info.insert("end", f"Seq: {doc.seq:04d}\n")
         self.wf_info.insert("end", f"VVV: {doc.vvv}\n")
         self.wf_info.insert("end", f"Descrizione: {doc.description}\n")
-        
+        created_ts = str(getattr(doc, "created_at", "") or "").replace("T", " ").strip()
+        self.wf_info.insert("end", f"Creato il: {created_ts if created_ts else '(n/d)'}\n")
+        self.wf_info.insert("end", f"CHECK: {checkout_label}\n")
+
         if getattr(doc, "obs_prev_state", ""):
             self.wf_info.insert("end", f"Stato precedente OBS: {doc.obs_prev_state}\n")
         

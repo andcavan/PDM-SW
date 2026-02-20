@@ -3,7 +3,7 @@
   "ws_id": "42e77f6a",
   "name": "PDM SolidWorks Macro Payload",
   "version": "0.1.0",
-  "built_at": "2026-02-17T23:34:42",
+  "built_at": "2026-02-20T19:56:09",
   "entry_exe": "PDM_SW_PAYLOAD.exe",
   "entry_py": "PDM_SW_PAYLOAD.py",
   "notes": "Payload UI minimale (Codifica/Workflow) lanciato da macro SolidWorks."

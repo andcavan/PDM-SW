@@ -1,0 +1,30 @@
+Archive cleanup retry start: 2026-02-20T18:36:34
+Root: C:\ArchivioCAD
+DIR C:\ArchivioCAD\QQQ\1000\rev | files=13
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R00.slddrw -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0001_R00.slddrw
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R00.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0001_R00.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R01.slddrw -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0001_R01.slddrw
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0001_R01.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0001_R01.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0009_R00.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0009_R00.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0009_R01.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0009_R01.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0010_R00.slddrw -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0010_R00.slddrw
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0010_R00.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0010_R00.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0012_R00.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0012_R00.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R00.slddrw -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0013_R00.slddrw
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R00.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0013_R00.sldprt
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R01.slddrw -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0013_R01.slddrw
+  MOVE C:\ArchivioCAD\QQQ\1000\rev\QQQ_1000-0013_R01.sldprt -> C:\ArchivioCAD\QQQ\1000\REV\QQQ_1000-0013_R01.sldprt
+DIR C:\ArchivioCAD\QQQ\2000\rel | files=1
+  MOVE_COLLISION C:\ArchivioCAD\QQQ\2000\rel\QQQ_2000-0001.sldprt -> C:\ArchivioCAD\QQQ\2000\QQQ_2000-0001__LEGACY_RETRY_20260220_183634.sldprt
+DIR C:\ArchivioCAD\SSS\0200\rev | files=2
+  MOVE C:\ArchivioCAD\SSS\0200\rev\SSS_0200-0002_R00.slddrw -> C:\ArchivioCAD\SSS\0200\REV\SSS_0200-0002_R00.slddrw
+  MOVE C:\ArchivioCAD\SSS\0200\rev\SSS_0200-0002_R00.sldprt -> C:\ArchivioCAD\SSS\0200\REV\SSS_0200-0002_R00.sldprt
+RMDIR C:\ArchivioCAD\QQQ\2000\rel
+
+SUMMARY
+legacy_dirs_scanned=3
+moved=15
+moved_collision=1
+deleted_tmp=0
+removed_dirs=1
+errors=0

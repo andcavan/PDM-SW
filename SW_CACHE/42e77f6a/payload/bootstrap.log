@@ -530,3 +530,33 @@
 17/02/2026 23:38:25 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
 17/02/2026 23:38:25 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
 17/02/2026 23:38:25 | Shell PID: 32248
+19/02/2026 17:38:55 | Bootstrap start. ActivePath=
+19/02/2026 17:38:55 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+19/02/2026 17:38:56 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+19/02/2026 17:38:56 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+19/02/2026 17:38:56 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+19/02/2026 17:38:57 | Shell PID: 10696
+20/02/2026 19:36:44 | Bootstrap start. ActivePath=C:\ArchivioCAD\AAA\2000\AAA_2000-0001.SLDDRW
+20/02/2026 19:36:44 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+20/02/2026 19:36:44 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+20/02/2026 19:36:44 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+20/02/2026 19:36:44 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+20/02/2026 19:36:44 | Shell PID: 22536
+20/02/2026 19:38:57 | Bootstrap start. ActivePath=C:\ArchivioCAD\AAA\2000\AAA_2000-0001.SLDDRW
+20/02/2026 19:38:57 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+20/02/2026 19:38:57 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+20/02/2026 19:38:57 | Use PY: C:\Users\prog3\AppData\Local\Programs\Python\Python314\pythonw.exe
+20/02/2026 19:38:57 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+20/02/2026 19:38:57 | Shell PID: 12668
+20/02/2026 19:53:53 | Bootstrap start. ActivePath=C:\ArchivioCAD\AAA\2000\AAA_2000-0001.SLDDRW
+20/02/2026 19:53:53 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+20/02/2026 19:53:53 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+20/02/2026 19:53:54 | Use EXE: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.exe
+20/02/2026 19:53:54 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+20/02/2026 19:53:54 | Shell PID: 3588
+20/02/2026 19:56:43 | Bootstrap start. ActivePath=C:\ArchivioCAD\AAA\2000\AAA_2000-0001.SLDDRW
+20/02/2026 19:56:43 | Payload copied from C:\PDM-SW\\WORKSPACES\\42e77f6a_prog\\macros\\payload to C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload
+20/02/2026 19:56:43 | SW context file: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\sw_context.json
+20/02/2026 19:56:44 | Use EXE: C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\\PDM_SW_PAYLOAD.exe
+20/02/2026 19:56:44 | Run BAT: cmd.exe /c ""C:\PDM-SW\\SW_CACHE\\42e77f6a\\payload\run_payload.bat""
+20/02/2026 19:56:44 | Shell PID: 9612

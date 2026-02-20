@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Literal
 
 
 DocType = Literal["PART", "ASSY", "MACHINE", "GROUP"]
@@ -31,6 +31,10 @@ class Document:
     created_at: str
     updated_at: str
     obs_prev_state: str = ""
+    checked_out: bool = False
+    checkout_owner_user: str = ""
+    checkout_owner_host: str = ""
+    checkout_at: str = ""
 
     def best_path_for_state(self) -> str:
         if self.state == "WIP":

@@ -23,6 +23,18 @@ class TabSolidWorks(BaseTab):
         self.tpl_part_var = None
         self.tpl_assy_var = None
         self.tpl_drw_var = None
+        self.sldreg_enabled_var = None
+        self.sldreg_file_var = None
+        self.sldreg_cleanup_var = None
+        self.sldreg_restore_system_options_var = None
+        self.sldreg_restore_toolbar_layout_var = None
+        self.sldreg_restore_toolbar_mode_var = None
+        self.sldreg_restore_keyboard_shortcuts_var = None
+        self.sldreg_restore_mouse_gestures_var = None
+        self.sldreg_restore_menu_customizations_var = None
+        self.sldreg_restore_saved_views_var = None
+        self.rad_sldreg_toolbar_all = None
+        self.rad_sldreg_toolbar_macro = None
         self.sw_desc_prop_var = None
         self.sw_map_rows = []
         self.sw_read_rows = []
@@ -41,7 +53,13 @@ class TabSolidWorks(BaseTab):
             font=ctk.CTkFont(size=16, weight="bold")
         ).pack(anchor="w", pady=(0, 10))
 
-        def row(label: str, var: tk.StringVar, browse: bool = True, is_file: bool = False):
+        def row(
+            label: str,
+            var: tk.StringVar,
+            browse: bool = True,
+            is_file: bool = False,
+            file_types=None,
+        ):
             r = ctk.CTkFrame(frame)
             r.pack(fill="x", pady=6)
             ctk.CTkLabel(r, text=label, width=170, anchor="w").pack(side="left", padx=(8, 6))
@@ -49,7 +67,9 @@ class TabSolidWorks(BaseTab):
             if browse:
                 def _pick():
                     if is_file:
-                        p = filedialog.askopenfilename()
+                        p = filedialog.askopenfilename(
+                            filetypes=file_types or [("Tutti i file", "*.*")]
+                        )
                     else:
                         p = filedialog.askdirectory()
                     if p:
@@ -60,11 +80,135 @@ class TabSolidWorks(BaseTab):
         self.tpl_part_var = tk.StringVar(value=self.cfg.solidworks.template_part)
         self.tpl_assy_var = tk.StringVar(value=self.cfg.solidworks.template_assembly)
         self.tpl_drw_var = tk.StringVar(value=self.cfg.solidworks.template_drawing)
+        self.sldreg_enabled_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_enabled", False))
+        )
+        self.sldreg_file_var = tk.StringVar(
+            value=str(getattr(self.cfg.solidworks, "sldreg_file", "") or "")
+        )
+        self.sldreg_cleanup_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_cleanup_before_import", True))
+        )
+        self.sldreg_restore_system_options_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_restore_system_options", True))
+        )
+        self.sldreg_restore_toolbar_layout_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_restore_toolbar_layout", True))
+        )
+        self.sldreg_restore_toolbar_mode_var = tk.StringVar(
+            value=self._normalize_toolbar_mode(
+                getattr(self.cfg.solidworks, "sldreg_restore_toolbar_mode", "all")
+            )
+        )
+        self.sldreg_restore_keyboard_shortcuts_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_restore_keyboard_shortcuts", True))
+        )
+        self.sldreg_restore_mouse_gestures_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_restore_mouse_gestures", True))
+        )
+        self.sldreg_restore_menu_customizations_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_restore_menu_customizations", True))
+        )
+        self.sldreg_restore_saved_views_var = tk.BooleanVar(
+            value=bool(getattr(self.cfg.solidworks, "sldreg_restore_saved_views", True))
+        )
 
         row("Archivio (root)", self.archive_root_var, browse=True, is_file=False)
         row("Template PART", self.tpl_part_var, browse=True, is_file=True)
         row("Template ASSY", self.tpl_assy_var, browse=True, is_file=True)
         row("Template DRW", self.tpl_drw_var, browse=True, is_file=True)
+
+        ctk.CTkLabel(
+            frame,
+            text="Configurazione pre-avvio SolidWorks (.sldreg)",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", pady=(18, 6))
+
+        ctk.CTkLabel(
+            frame,
+            text="Modalita filtrata: scegli quali gruppi configurare dal file .sldreg. "
+                 "Se disattivata, SolidWorks viene aperto in modalita pulita come ora.",
+            text_color="#777777",
+            wraplength=820,
+            justify="left"
+        ).pack(anchor="w", pady=(0, 8))
+
+        row(
+            "File configurazione .sldreg",
+            self.sldreg_file_var,
+            browse=True,
+            is_file=True,
+            file_types=[
+                ("File SolidWorks Registry", "*.sldreg"),
+                ("File Registry", "*.reg"),
+                ("Tutti i file", "*.*"),
+            ],
+        )
+
+        sldreg_opts = ctk.CTkFrame(frame, fg_color="transparent")
+        sldreg_opts.pack(fill="x", pady=(0, 10))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Abilita gestione .sldreg prima di avviare SolidWorks",
+            variable=self.sldreg_enabled_var,
+        ).pack(anchor="w", padx=8, pady=(2, 2))
+        ctk.CTkLabel(
+            sldreg_opts,
+            text="Cosa configurare (.sldreg)",
+        ).pack(anchor="w", padx=8, pady=(8, 4))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Opzioni del sistema",
+            variable=self.sldreg_restore_system_options_var,
+        ).pack(anchor="w", padx=8, pady=(0, 2))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Layout barra degli strumenti",
+            variable=self.sldreg_restore_toolbar_layout_var,
+            command=self._sync_sldreg_toolbar_mode_state,
+        ).pack(anchor="w", padx=8, pady=(0, 2))
+        toolbar_mode_box = ctk.CTkFrame(sldreg_opts, fg_color="transparent")
+        toolbar_mode_box.pack(anchor="w", padx=(28, 8), pady=(0, 4))
+        self.rad_sldreg_toolbar_all = ctk.CTkRadioButton(
+            toolbar_mode_box,
+            text="Tutte le barre + CommandManager",
+            variable=self.sldreg_restore_toolbar_mode_var,
+            value="all",
+        )
+        self.rad_sldreg_toolbar_all.pack(anchor="w")
+        self.rad_sldreg_toolbar_macro = ctk.CTkRadioButton(
+            toolbar_mode_box,
+            text="Solo barra strumenti macro",
+            variable=self.sldreg_restore_toolbar_mode_var,
+            value="macro_only",
+        )
+        self.rad_sldreg_toolbar_macro.pack(anchor="w", pady=(2, 0))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Tasti rapidi da tastiera",
+            variable=self.sldreg_restore_keyboard_shortcuts_var,
+        ).pack(anchor="w", padx=8, pady=(0, 2))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Gesti del mouse",
+            variable=self.sldreg_restore_mouse_gestures_var,
+        ).pack(anchor="w", padx=8, pady=(0, 2))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Personalizzazioni menu",
+            variable=self.sldreg_restore_menu_customizations_var,
+        ).pack(anchor="w", padx=8, pady=(0, 2))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Viste salvate",
+            variable=self.sldreg_restore_saved_views_var,
+        ).pack(anchor="w", padx=8, pady=(0, 2))
+        ctk.CTkCheckBox(
+            sldreg_opts,
+            text="Pulisci chiavi filtrate prima dell'import",
+            variable=self.sldreg_cleanup_var,
+        ).pack(anchor="w", padx=8, pady=(8, 2))
+        self._sync_sldreg_toolbar_mode_state()
 
         # ---- Mappatura proprietà: PDM -> SolidWorks
         ctk.CTkLabel(
@@ -287,6 +431,19 @@ class TabSolidWorks(BaseTab):
         self.sw_status = ctk.CTkLabel(btns, text="")
         self.sw_status.pack(side="left", padx=12)
 
+    def _normalize_toolbar_mode(self, value: object) -> str:
+        mode = str(value or "").strip().casefold()
+        if mode in ("macro", "macro_only", "macro-only", "macros", "solo_macro"):
+            return "macro_only"
+        return "all"
+
+    def _sync_sldreg_toolbar_mode_state(self) -> None:
+        state = "normal" if bool(self.sldreg_restore_toolbar_layout_var.get()) else "disabled"
+        if self.rad_sldreg_toolbar_all is not None:
+            self.rad_sldreg_toolbar_all.configure(state=state)
+        if self.rad_sldreg_toolbar_macro is not None:
+            self.rad_sldreg_toolbar_macro.configure(state=state)
+
     def _pdm_fields_for_mapping(self) -> list[str]:
         """Campi PDM core disponibili per il mapping."""
         return ["code", "revision", "state", "doc_type", "mmm", "gggg", "vvv"]
@@ -309,6 +466,36 @@ class TabSolidWorks(BaseTab):
         self.cfg.solidworks.template_part = self.tpl_part_var.get().strip()
         self.cfg.solidworks.template_assembly = self.tpl_assy_var.get().strip()
         self.cfg.solidworks.template_drawing = self.tpl_drw_var.get().strip()
+        self.cfg.solidworks.sldreg_enabled = bool(
+            self.sldreg_enabled_var.get() if self.sldreg_enabled_var is not None else False
+        )
+        self.cfg.solidworks.sldreg_file = (
+            self.sldreg_file_var.get().strip() if self.sldreg_file_var is not None else ""
+        )
+        self.cfg.solidworks.sldreg_cleanup_before_import = bool(
+            self.sldreg_cleanup_var.get() if self.sldreg_cleanup_var is not None else True
+        )
+        self.cfg.solidworks.sldreg_restore_system_options = bool(
+            self.sldreg_restore_system_options_var.get() if self.sldreg_restore_system_options_var is not None else True
+        )
+        self.cfg.solidworks.sldreg_restore_toolbar_layout = bool(
+            self.sldreg_restore_toolbar_layout_var.get() if self.sldreg_restore_toolbar_layout_var is not None else True
+        )
+        self.cfg.solidworks.sldreg_restore_toolbar_mode = self._normalize_toolbar_mode(
+            self.sldreg_restore_toolbar_mode_var.get() if self.sldreg_restore_toolbar_mode_var is not None else "all"
+        )
+        self.cfg.solidworks.sldreg_restore_keyboard_shortcuts = bool(
+            self.sldreg_restore_keyboard_shortcuts_var.get() if self.sldreg_restore_keyboard_shortcuts_var is not None else True
+        )
+        self.cfg.solidworks.sldreg_restore_mouse_gestures = bool(
+            self.sldreg_restore_mouse_gestures_var.get() if self.sldreg_restore_mouse_gestures_var is not None else True
+        )
+        self.cfg.solidworks.sldreg_restore_menu_customizations = bool(
+            self.sldreg_restore_menu_customizations_var.get() if self.sldreg_restore_menu_customizations_var is not None else True
+        )
+        self.cfg.solidworks.sldreg_restore_saved_views = bool(
+            self.sldreg_restore_saved_views_var.get() if self.sldreg_restore_saved_views_var is not None else True
+        )
         
         # Descrizione (SW-managed)
         try:
@@ -365,6 +552,18 @@ class TabSolidWorks(BaseTab):
         self.app.cfg_mgr.cfg = self.cfg
         self.app.cfg_mgr.save()
         info("Impostazioni SolidWorks salvate.")
+
+    def refresh(self):
+        """Ricarica la tab dalla configurazione della workspace corrente."""
+        try:
+            for child in list(self.root.winfo_children()):
+                try:
+                    child.destroy()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        self._build_ui()
 
     def _test_sw(self):
         """Testa connessione a SolidWorks."""

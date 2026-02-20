@@ -7,18 +7,18 @@ Obiettivo:
 - Permette: Codifica (crea codice + SaveAs in WIP) e Workflow (WIP/REL/IN_REV/OBS).
 
 Percorsi:
-- Root PDM: c:\PDM-SW
-- Bootstrap sorgente: c:\PDM-SW\SW_MACROS\PDM_SW_BOOTSTRAP_42e77f6a.bas
-- Payload: c:\PDM-SW\WORKSPACES\42e77f6a_prog\macros\payload
-- Cache: c:\PDM-SW\SW_CACHE\42e77f6a\payload
+- Root PDM: C:\PDM-SW
+- Bootstrap sorgente: C:\PDM-SW\SW_MACROS\PDM_SW_BOOTSTRAP_42e77f6a.bas
+- Payload: C:\PDM-SW\WORKSPACES\42e77f6a_prog\macros\payload
+- Cache: C:\PDM-SW\SW_CACHE\42e77f6a\payload
 
 PASSI (una tantum):
 1) In SolidWorks: Strumenti > Macro > Nuova...
 2) Salva la macro come:
-   c:\PDM-SW\SW_MACROS\PDM_SW_BOOTSTRAP_42e77f6a.swp
+   C:\PDM-SW\SW_MACROS\PDM_SW_BOOTSTRAP_42e77f6a.swp
 3) SolidWorks aprirà l'editor VBA. Importa il modulo:
    File > Import File...  e seleziona:
-   c:\PDM-SW\SW_MACROS\PDM_SW_BOOTSTRAP_42e77f6a.bas
+   C:\PDM-SW\SW_MACROS\PDM_SW_BOOTSTRAP_42e77f6a.bas
 4) Salva e chiudi l'editor VBA.
 5) (Consigliato) Crea un pulsante:
    Strumenti > Personalizza... > Comandi > Macro
@@ -26,7 +26,7 @@ PASSI (una tantum):
 
 BUILD EXE (consigliato):
 - Vai in:
-  c:\PDM-SW\WORKSPACES\42e77f6a_prog\macros\payload
+  C:\PDM-SW\WORKSPACES\42e77f6a_prog\macros\payload
 - Esegui:
   build_payload_exe.bat
 - Otterrai:

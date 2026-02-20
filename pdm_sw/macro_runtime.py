@@ -383,6 +383,144 @@ if ctk is not None:
             except Exception:
                 pass
 
+        def _checkout_identity(self) -> tuple[str, str]:
+            user = str(self.session.get("display_name", "") or self.session.get("user_id", "")).strip() or "unknown"
+            host = str(self.session.get("host", "") or "").strip()
+            return user, host
+
+        def _is_doc_checked_out_by_me(self, doc: Document | None) -> bool:
+            if doc is None:
+                return False
+            if not bool(getattr(doc, "checked_out", False)):
+                return False
+            me, _host = self._checkout_identity()
+            owner = str(getattr(doc, "checkout_owner_user", "") or "").strip()
+            return bool(me) and owner == me
+
+        def _checkout_status_label(self, doc: Document | None) -> str:
+            if doc is None:
+                return "CHECK-IN"
+            if not bool(getattr(doc, "checked_out", False)):
+                return "CHECK-IN"
+            owner = str(getattr(doc, "checkout_owner_user", "") or "").strip() or "n/d"
+            host = str(getattr(doc, "checkout_owner_host", "") or "").strip()
+            at = str(getattr(doc, "checkout_at", "") or "").strip().replace("T", " ")
+            tail = ""
+            if host:
+                tail += f" su {host}"
+            if at:
+                tail += f" @ {at}"
+            return f"CHECK-OUT: {owner}{tail}"
+
+        def _checkout_document(self, code: str, show_feedback: bool = True) -> bool:
+            code_u = (code or "").strip()
+            if not code_u:
+                if show_feedback:
+                    messagebox.showwarning("PDM (Macro SolidWorks)", "Nessun codice selezionato.")
+                return False
+            user, host = self._checkout_identity()
+            ok, status, holder = self.store.checkout_document(code_u, owner_user=user, owner_host=host)
+            if ok:
+                msg = "Documento messo in CHECK-OUT." if status == "CHECKOUT_OK" else "CHECK-OUT gia assegnato a te (refresh)."
+                self._log_activity(action="CHECKOUT", code=code_u, status="OK", message=msg, details={"status_code": status})
+                if show_feedback:
+                    messagebox.showinfo("PDM (Macro SolidWorks)", msg)
+                self._refresh_wf_state()
+                return True
+            if status == "CHECKOUT_BY_OTHER":
+                owner = str(holder.get("checkout_owner_user", "") or "").strip() or "altro utente"
+                host_h = str(holder.get("checkout_owner_host", "") or "").strip()
+                msg = f"Documento in CHECK-OUT da {owner}" + (f" su {host_h}" if host_h else "") + "."
+                self._log_activity(action="CHECKOUT", code=code_u, status="LOCKED", message=msg, details={"holder": holder})
+                if show_feedback:
+                    messagebox.showwarning("PDM (Macro SolidWorks)", msg)
+                return False
+            msg = str(status or "CHECK-OUT non riuscito.")
+            self._log_activity(action="CHECKOUT", code=code_u, status="WARN", message=msg, details={"holder": holder})
+            if show_feedback:
+                messagebox.showwarning("PDM (Macro SolidWorks)", msg)
+            return False
+
+        def _checkin_document(self, code: str, show_feedback: bool = True, force: bool = False) -> bool:
+            code_u = (code or "").strip()
+            if not code_u:
+                if show_feedback:
+                    messagebox.showwarning("PDM (Macro SolidWorks)", "Nessun codice selezionato.")
+                return False
+            user, _host = self._checkout_identity()
+            ok, status, holder = self.store.checkin_document(code_u, owner_user=user, force=force)
+            if ok:
+                msg = "Documento messo in CHECK-IN." if status != "CHECKIN_ALREADY" else "Documento gia in CHECK-IN."
+                self._log_activity(action="CHECKIN", code=code_u, status="OK", message=msg, details={"status_code": status})
+                if show_feedback:
+                    messagebox.showinfo("PDM (Macro SolidWorks)", msg)
+                self._refresh_wf_state()
+                return True
+            if status == "CHECKOUT_BY_OTHER":
+                owner = str(holder.get("checkout_owner_user", "") or "").strip() or "altro utente"
+                host_h = str(holder.get("checkout_owner_host", "") or "").strip()
+                msg = f"CHECK-IN non consentito: documento in CHECK-OUT da {owner}" + (f" su {host_h}" if host_h else "") + "."
+                self._log_activity(action="CHECKIN", code=code_u, status="LOCKED", message=msg, details={"holder": holder})
+                if show_feedback:
+                    messagebox.showwarning("PDM (Macro SolidWorks)", msg)
+                return False
+            msg = str(status or "CHECK-IN non riuscito.")
+            self._log_activity(action="CHECKIN", code=code_u, status="WARN", message=msg, details={"holder": holder})
+            if show_feedback:
+                messagebox.showwarning("PDM (Macro SolidWorks)", msg)
+            return False
+
+        def _require_wip_checkout(self, doc: Document, action_label: str) -> bool:
+            state = str(getattr(doc, "state", "") or "").strip().upper()
+            if state != "WIP":
+                return True
+            if not bool(getattr(doc, "checked_out", False)):
+                messagebox.showwarning(
+                    "PDM (Macro SolidWorks)",
+                    f"{action_label}: documento WIP non in CHECK-OUT.\nEsegui CHECK-OUT prima di procedere.",
+                )
+                return False
+            if not self._is_doc_checked_out_by_me(doc):
+                owner = str(getattr(doc, "checkout_owner_user", "") or "").strip() or "altro utente"
+                host = str(getattr(doc, "checkout_owner_host", "") or "").strip()
+                who = f"{owner} su {host}" if host else owner
+                messagebox.showwarning("PDM (Macro SolidWorks)", f"{action_label}: documento in CHECK-OUT da {who}.")
+                return False
+            return True
+
+        def _require_checkout_for_edit(self, doc: Document, action_label: str) -> bool:
+            state = str(getattr(doc, "state", "") or "").strip().upper()
+            if state in ("REL", "OBS"):
+                messagebox.showwarning("PDM (Macro SolidWorks)", f"{action_label}: documento in stato {state}, non modificabile.")
+                return False
+            if not bool(getattr(doc, "checked_out", False)):
+                messagebox.showwarning(
+                    "PDM (Macro SolidWorks)",
+                    f"{action_label}: documento non in CHECK-OUT.\nEsegui CHECK-OUT prima di procedere.",
+                )
+                return False
+            if not self._is_doc_checked_out_by_me(doc):
+                owner = str(getattr(doc, "checkout_owner_user", "") or "").strip() or "altro utente"
+                host = str(getattr(doc, "checkout_owner_host", "") or "").strip()
+                who = f"{owner} su {host}" if host else owner
+                messagebox.showwarning("PDM (Macro SolidWorks)", f"{action_label}: documento in CHECK-OUT da {who}.")
+                return False
+            return True
+
+        def _wf_checkout(self):
+            code = (self.code_var.get() or "").strip()
+            if not code:
+                messagebox.showwarning("PDM (Macro SolidWorks)", "Nessun codice selezionato.")
+                return
+            self._checkout_document(code=code, show_feedback=True)
+
+        def _wf_checkin(self):
+            code = (self.code_var.get() or "").strip()
+            if not code:
+                messagebox.showwarning("PDM (Macro SolidWorks)", "Nessun codice selezionato.")
+                return
+            self._checkin_document(code=code, show_feedback=True)
+
 
         def _ensure_sw(self) -> Any:
             """Restituisce l'istanza SolidWorks corretta (quella che ha il documento attivo).
@@ -474,6 +612,7 @@ if ctk is not None:
             self.lbl_doc.configure(text=self._doc_label_text())
             self._refresh_machines()
             self._refresh_preview()
+            self._refresh_wf_state()
 
         # ---------------- CODIFICA ----------------
         def _ui_codifica(self):
@@ -1006,8 +1145,12 @@ if ctk is not None:
             self.ent_code = ctk.CTkEntry(row, textvariable=self.code_var, width=320)
             self.ent_code.pack(side="left", padx=(0, 10))
             ctk.CTkButton(row, text="AGGIORNA DA DOCUMENTO ATTIVO", command=self._refresh_from_active_doc).pack(side="left")
+            self.btn_checkout = ctk.CTkButton(row, text="CHECK-OUT", command=self._wf_checkout, width=130)
+            self.btn_checkout.pack(side="left", padx=6)
+            self.btn_checkin = ctk.CTkButton(row, text="CHECK-IN", command=self._wf_checkin, width=130)
+            self.btn_checkin.pack(side="left", padx=6)
 
-            self.lbl_wf_info = ctk.CTkLabel(frm, text="Stato: — | Rev: —", font=ctk.CTkFont(size=13, weight="bold"))
+            self.lbl_wf_info = ctk.CTkLabel(frm, text="Stato: - | Rev: - | CHECK: CHECK-IN", font=ctk.CTkFont(size=13, weight="bold"))
             self.lbl_wf_info.pack(anchor="w", padx=12, pady=(10, 10))
 
             # Due righe di pulsanti: crea i widget nel frame corretto (niente pack(in_=...) con master diverso)
@@ -1035,25 +1178,53 @@ if ctk is not None:
             self.after(200, self._refresh_wf_state)
 
         def _refresh_wf_state(self):
+            def _set(btn_name: str, enabled: bool) -> None:
+                btn = getattr(self, btn_name, None)
+                if btn is not None:
+                    btn.configure(state=("normal" if enabled else "disabled"))
+
             code = (self.code_var.get() or "").strip()
             if not code:
-                self.lbl_wf_info.configure(text="Stato: — | Rev: —")
+                self.lbl_wf_info.configure(text="Stato: - | Rev: - | CHECK: CHECK-IN")
+                _set("btn_wip_rel", False)
+                _set("btn_rel_inrev", False)
+                _set("btn_inrev_app", False)
+                _set("btn_inrev_cancel", False)
+                _set("btn_restore", False)
+                _set("btn_to_obs", False)
+                _set("btn_checkout", False)
+                _set("btn_checkin", False)
                 return
             doc = self.store.get_document(code)
             if not doc:
-                self.lbl_wf_info.configure(text="Stato: (non presente in DB) | Rev: —")
+                self.lbl_wf_info.configure(text="Stato: (non presente in DB) | Rev: - | CHECK: -")
+                _set("btn_wip_rel", False)
+                _set("btn_rel_inrev", False)
+                _set("btn_inrev_app", False)
+                _set("btn_inrev_cancel", False)
+                _set("btn_restore", False)
+                _set("btn_to_obs", False)
+                _set("btn_checkout", False)
+                _set("btn_checkin", False)
                 return
 
-            self.lbl_wf_info.configure(text=f"Stato: {doc.state} | Rev: {int(doc.revision):02d}")
+            st = str(doc.state or "").strip().upper()
+            is_checked_out = bool(getattr(doc, "checked_out", False))
+            is_checkout_mine = self._is_doc_checked_out_by_me(doc)
+            can_checkout_state = st in ("WIP", "IN_REV")
 
-            # enable/disable
-            st = str(doc.state)
-            self.btn_wip_rel.configure(state=("normal" if st == "WIP" else "disabled"))
-            self.btn_rel_inrev.configure(state=("normal" if st == "REL" else "disabled"))
-            self.btn_inrev_app.configure(state=("normal" if st == "IN_REV" else "disabled"))
-            self.btn_inrev_cancel.configure(state=("normal" if st == "IN_REV" else "disabled"))
-            self.btn_restore.configure(state=("normal" if st == "OBS" else "disabled"))
-            self.btn_to_obs.configure(state=("normal" if st != "OBS" else "disabled"))
+            self.lbl_wf_info.configure(
+                text=f"Stato: {doc.state} | Rev: {int(doc.revision):02d} | {self._checkout_status_label(doc)}"
+            )
+
+            _set("btn_wip_rel", st == "WIP" and is_checked_out and is_checkout_mine)
+            _set("btn_rel_inrev", st == "REL")
+            _set("btn_inrev_app", st == "IN_REV" and is_checked_out and is_checkout_mine)
+            _set("btn_inrev_cancel", st == "IN_REV" and is_checked_out and is_checkout_mine)
+            _set("btn_restore", st == "OBS")
+            _set("btn_to_obs", st != "OBS")
+            _set("btn_checkout", can_checkout_state and ((not is_checked_out) or is_checkout_mine))
+            _set("btn_checkin", can_checkout_state and is_checked_out and is_checkout_mine)
 
         def _update_doc_record(self, doc: Document) -> None:
             self.store.update_document(
@@ -1155,6 +1326,19 @@ if ctk is not None:
                 messagebox.showwarning("PDM (Macro SolidWorks)", f"Workflow fallito: {e}")
                 return
 
+            if action == "WIP_REL":
+                if not self._require_wip_checkout(doc, "Release"):
+                    self._refresh_wf_state()
+                    return
+            elif action == "INREV_APPROVE":
+                if not self._require_checkout_for_edit(doc, "Approvazione revisione"):
+                    self._refresh_wf_state()
+                    return
+            elif action == "INREV_CANCEL":
+                if not self._require_checkout_for_edit(doc, "Annullamento revisione"):
+                    self._refresh_wf_state()
+                    return
+
             from_state = str(doc.state)
             rev_before = int(doc.revision)
             note = self._prompt_workflow_note(code=doc.code, event_title=event_title, from_state=from_state, to_state=expected_to)
@@ -1240,6 +1424,15 @@ if ctk is not None:
                     )
                 except Exception as ne:
                     messagebox.showwarning("PDM (Macro SolidWorks)", f"Cambio stato eseguito, ma salvataggio nota fallito: {ne}")
+                if action in ("WIP_REL", "INREV_APPROVE", "INREV_CANCEL", "TO_OBS", "RESTORE_OBS"):
+                    try:
+                        self.store.clear_document_checkout(doc.code)
+                        doc.checked_out = False
+                        doc.checkout_owner_user = ""
+                        doc.checkout_owner_host = ""
+                        doc.checkout_at = ""
+                    except Exception:
+                        pass
                 self._log_activity(action=f"WF_{action}", code=doc.code, status="OK", message=f"{from_state}->{doc.state}")
             except FileExistsError as e:
                 self._log_activity(action=f"WF_{action}", code=doc.code, status="ERROR", message=f"File exists: {e}")
@@ -1357,3 +1550,4 @@ if __name__ == "__main__":
         except Exception:
             pass
         raise
+

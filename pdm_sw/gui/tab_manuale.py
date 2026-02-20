@@ -24,7 +24,7 @@ class TabManuale(BaseTab):
 
         ctk.CTkLabel(
             self.root,
-            text="Manuale Rapido (Rev v50.7)",
+            text="Manuale Rapido (Rev v50.13)",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).pack(anchor="w", padx=12, pady=(12, 8))
 
@@ -43,6 +43,7 @@ class TabManuale(BaseTab):
             "1) Workspace\n"
             "- Usa il pulsante WORKSPACE... in alto per aprire gli strumenti workspace.\n"
             "- Da li puoi cambiare/creare/copiare/cancellare workspace e scegliere la cartella condivisa.\n"
+            "- Pulsante MIGRA ARCHIVIO CAD: esegue dry-run e migrazione al nuovo layout archivio (con backup).\n"
             "- Ogni workspace ha configurazione, database e backup separati.\n"
             "- Puoi scegliere la CARTELLA CONDIVISA (default: cartella attuale).\n"
             "- La root condivisa attiva e mostrata in alto come SHARED: <percorso>.\n"
@@ -69,6 +70,8 @@ class TabManuale(BaseTab):
             "- Import file esistente: seleziona file .sldprt/.sldasm/.slddrw esistente da importare in WIP.\n"
             "  * Se selezioni .slddrw, il sistema cerca automaticamente il modello associato (.sldprt o .sldasm).\n"
             "  * Opzione 'Importa anche DRW': se presente file .slddrw con stesso nome del modello, viene importato automaticamente.\n"
+            "- Nuovi documenti WIP: default in CHECK-IN.\n"
+            "- Opzione 'Crea in CHECK-OUT': crea subito il nuovo documento in checkout utente corrente.\n"
             "\n"
             "6) Gerarchia\n"
             "- Vista ad albero MMM -> GGGG -> CODICE.\n"
@@ -79,11 +82,25 @@ class TabManuale(BaseTab):
             "- Destra: pannello workflow con transizioni stato e dettagli del codice selezionato.\n"
             "- Il pulsante INVIA A WORKFLOW e nel pannello workflow (in alto).\n"
             "- Puoi regolare la larghezza del pannello workflow trascinando il separatore centrale (salvata in locale).\n"
+            "- Pulsanti CHECK-OUT / CHECK-IN per controllo modifica multiutente.\n"
+            "- Nell'elenco Operativo e visibile la colonna CHECK (IN, OUT, OUT(ME)).\n"
+            "- REL e OBS non possono essere messi in CHECK-OUT (REL intoccabile).\n"
+            "- WIP -> REL consentito solo se il WIP e in CHECK-OUT dell'utente corrente.\n"
+            "- IN_REV -> REL (OK/ANNULLA) consentito solo se IN_REV e in CHECK-OUT dell'utente corrente.\n"
             "- Transizioni stato: WIP -> REL -> IN_REV -> REL e OBS.\n"
+            "- Layout archivio corrente: file WIP/REL nella cartella base codice; revisioni in IN_REV e REV.\n"
             "- Ripristino da OBS allo stato precedente se disponibile.\n"
             "- Ogni cambio stato richiede una nota obbligatoria (minimo 3 caratteri).\n"
             "- Le note sono salvate con data/ora, tipo evento e stati (da -> a).\n"
             "- Ogni transizione registra operazioni file in WORKSPACES\\<workspace>\\LOGS\\workflow.log.\n"
+            "\n"
+            "Mini tabella operativa (stato/azione/permesso)\n"
+            "-----------------------------------------------\n"
+            "STATO  | CHECK-OUT                     | CHECK-IN                     | TRANSIZIONI\n"
+            "WIP    | SI                            | SI (solo owner checkout)     | WIP->REL (solo owner checkout), ->OBS\n"
+            "REL    | NO                            | NO                           | REL->IN_REV, ->OBS\n"
+            "IN_REV | SI                            | SI (solo owner checkout)     | IN_REV->REL (OK/ANNULLA solo owner checkout), ->OBS\n"
+            "OBS    | NO                            | NO                           | RIPRISTINA OBS (se stato precedente valido)\n"
             "\n"
             "8) Monitor\n"
             "- Vista LOCK ATTIVI: codice, utente, host, scadenza lock e minuti residui.\n"

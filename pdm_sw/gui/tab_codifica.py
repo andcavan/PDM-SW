@@ -51,6 +51,7 @@ class TabCodifica(BaseTab):
         self.desc_var = None
         self.link_file_var = None
         self.link_auto_drw_var = None
+        self.create_checkout_var = None
         
         # Widget references
         self.mmm_menu = None
@@ -76,6 +77,7 @@ class TabCodifica(BaseTab):
         self.desc_var = tk.StringVar(value="")
         self.link_file_var = tk.StringVar(value="")
         self.link_auto_drw_var = tk.BooleanVar(value=True)
+        self.create_checkout_var = tk.BooleanVar(value=False)
 
         # --- TIPO DOCUMENTO ---
         type_frame = ctk.CTkFrame(frame)
@@ -150,6 +152,11 @@ class TabCodifica(BaseTab):
         
         right_actions = ctk.CTkFrame(actions_frame, fg_color="transparent")
         right_actions.pack(side="right", padx=8, pady=8)
+        ctk.CTkCheckBox(
+            right_actions,
+            text="Crea in CHECK-OUT",
+            variable=self.create_checkout_var,
+        ).pack(anchor="e", pady=(0, 6))
         ctk.CTkButton(right_actions, text="GENERA", width=180, height=40, font=ctk.CTkFont(size=16, weight="bold"), fg_color="#27AE60", hover_color="#229954", command=self._generate_document).pack()
 
         self._on_doc_type_change()
@@ -454,6 +461,13 @@ class TabCodifica(BaseTab):
             
             # Crea documento in DB
             self.store.add_document(doc)
+
+            if bool(self.create_checkout_var.get()):
+                if not self.app._checkout_document(code, show_feedback=False, refresh_ui=False):
+                    warn("Documento creato, ma CHECK-OUT automatico non riuscito.")
+                    self.app._log_activity(action_log, code=code, status="WARN", message="Creato ma checkout automatico fallito")
+                    self.app._refresh_all()
+                    return
             
             # Import file esistente se specificato
             link_file = self.link_file_var.get().strip()
@@ -470,7 +484,12 @@ class TabCodifica(BaseTab):
                     warn(f"Hai selezionato un file esistente: verrà importato, non creato da template.")
                 else:
                     # Delega alla funzione _create_files_for_code dell'app principale
-                    self.app._create_files_for_code(code, create_drw=(file_mode == "model_drw"), only_missing=False)
+                    self.app._create_files_for_code(
+                        code,
+                        create_drw=(file_mode == "model_drw"),
+                        only_missing=False,
+                        require_checkout=False,
+                    )
             
             info(f"Documento creato: {code}")
             self.app._log_activity(action_log, code=code, status="OK", message=f"Creato {doc_type}")

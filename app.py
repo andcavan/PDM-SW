@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import json
+import subprocess
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -20,8 +21,10 @@ from pdm_sw.archive import archive_dirs, archive_dirs_for_machine, archive_dirs_
 from pdm_sw.backup import BackupManager
 from pdm_sw.sw_integration import test_solidworks_connection
 from pdm_sw.macro_publish import publish_macro
-from pdm_sw.sw_api import get_solidworks_app, create_model_file, create_drawing_file
+from pdm_sw.sw_api import get_solidworks_app, create_model_file, create_drawing_file, open_doc
+from pdm_sw.archive_migration import run_archive_layout_migration
 from pdm_sw.session_context import resolve_session_context
+from pdm_sw.sldreg_manager import import_sldreg_filtered, RestoreOptions as SldregRestoreOptions
 from pdm_sw.ui.table import SimpleTable, Table
 from pdm_sw.ui.rc_copy_mixin import RCCopyMixin
 from pdm_sw.ui.report_mixin import ReportMixin
@@ -37,7 +40,7 @@ from pdm_sw.gui.tab_operativo import TabOperativo
 
 APP_DIR = Path(__file__).resolve().parent
 LOCAL_SETTINGS_PATH = APP_DIR / "local_settings.json"
-APP_REV = "v50.7"
+APP_REV = "v50.22"
 APP_TITLE = f"PDM SolidWorks - Workspace Edition | Rev {APP_REV}"
 DOC_LOCK_TTL_SECONDS = 20 * 60
 WORKFLOW_WIDTH_RATIO_DEFAULT = 0.40
@@ -162,6 +165,8 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         self.wf_btn_cancel = self.tab_operativo_obj.wf_btn_cancel
         self.wf_btn_obsolete = self.tab_operativo_obj.wf_btn_obsolete
         self.wf_btn_restore_obs = self.tab_operativo_obj.wf_btn_restore_obs
+        self.wf_btn_checkout = self.tab_operativo_obj.wf_btn_checkout
+        self.wf_btn_checkin = self.tab_operativo_obj.wf_btn_checkin
         self.btn_send_to_wf = self.tab_operativo_obj.btn_send_to_wf
         self.wf_info = self.tab_operativo_obj.wf_info
 
@@ -349,6 +354,204 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         except Exception:
             pass
 
+    def _checkout_identity(self) -> tuple[str, str]:
+        user = str(self.session.get("display_name", "") or self.session.get("user_id", "")).strip() or "unknown"
+        host = str(self.session.get("host", "")).strip()
+        return user, host
+
+    def _is_doc_checked_out_by_me(self, doc: Document | None) -> bool:
+        if doc is None:
+            return False
+        if not bool(getattr(doc, "checked_out", False)):
+            return False
+        me, _host = self._checkout_identity()
+        owner = str(getattr(doc, "checkout_owner_user", "") or "").strip()
+        return bool(me) and owner == me
+
+    def _checkout_status_label(self, doc: Document | None) -> str:
+        if doc is None:
+            return "CHECK-IN"
+        if not bool(getattr(doc, "checked_out", False)):
+            return "CHECK-IN"
+        owner = str(getattr(doc, "checkout_owner_user", "") or "").strip() or "n/d"
+        host = str(getattr(doc, "checkout_owner_host", "") or "").strip()
+        at = str(getattr(doc, "checkout_at", "") or "").strip().replace("T", " ")
+        tail = ""
+        if host:
+            tail += f" su {host}"
+        if at:
+            tail += f" @ {at}"
+        return f"CHECK-OUT: {owner}{tail}"
+
+    def _checkout_table_value(self, doc: Document | None) -> str:
+        if doc is None or not bool(getattr(doc, "checked_out", False)):
+            return "IN"
+        owner = str(getattr(doc, "checkout_owner_user", "") or "").strip() or "n/d"
+        me, _host = self._checkout_identity()
+        if me and owner == me:
+            return "OUT (ME)"
+        return f"OUT ({owner})"
+
+    def _require_wip_checkout(self, doc: Document, action_label: str) -> bool:
+        state = str(getattr(doc, "state", "") or "").strip().upper()
+        if state != "WIP":
+            return True
+        if not bool(getattr(doc, "checked_out", False)):
+            warn(f"{action_label}: documento WIP non in CHECK-OUT.\nEsegui CHECK-OUT prima di procedere.")
+            return False
+        if not self._is_doc_checked_out_by_me(doc):
+            owner = str(getattr(doc, "checkout_owner_user", "") or "").strip() or "altro utente"
+            host = str(getattr(doc, "checkout_owner_host", "") or "").strip()
+            who = f"{owner} su {host}" if host else owner
+            warn(f"{action_label}: documento in CHECK-OUT da {who}.")
+            return False
+        return True
+
+    def _require_checkout_for_edit(self, doc: Document, action_label: str) -> bool:
+        state = str(getattr(doc, "state", "") or "").strip().upper()
+        if state in ("REL", "OBS"):
+            warn(f"{action_label}: documento in stato {state}, non modificabile.")
+            return False
+        if not bool(getattr(doc, "checked_out", False)):
+            warn(f"{action_label}: documento non in CHECK-OUT.\nEsegui CHECK-OUT prima di procedere.")
+            return False
+        if not self._is_doc_checked_out_by_me(doc):
+            owner = str(getattr(doc, "checkout_owner_user", "") or "").strip() or "altro utente"
+            host = str(getattr(doc, "checkout_owner_host", "") or "").strip()
+            who = f"{owner} su {host}" if host else owner
+            warn(f"{action_label}: documento in CHECK-OUT da {who}.")
+            return False
+        return True
+
+    def _get_workflow_or_selected_code(self) -> str:
+        try:
+            wf_code = (self.wf_code_var.get() or "").strip()
+        except Exception:
+            wf_code = ""
+        if wf_code:
+            return wf_code
+        code = self._get_table_selected_code()
+        if code:
+            return code
+        try:
+            return (self.wf_code_var.get() or "").strip()
+        except Exception:
+            return ""
+
+    def _checkout_document(self, code: str, show_feedback: bool = True, refresh_ui: bool = True) -> bool:
+        code_u = (code or "").strip()
+        if not code_u:
+            if show_feedback:
+                warn("Seleziona un codice.")
+            return False
+        user, host = self._checkout_identity()
+        ok, status, holder = self.store.checkout_document(code_u, owner_user=user, owner_host=host)
+        if ok:
+            msg = "Documento messo in CHECK-OUT." if status == "CHECKOUT_OK" else "CHECK-OUT gia assegnato a te (refresh)."
+            self._log_activity(
+                action="CHECKOUT",
+                code=code_u,
+                status="OK",
+                message=msg,
+                details={"status_code": status},
+            )
+            if show_feedback:
+                info(msg)
+            if refresh_ui:
+                self._refresh_all()
+            return True
+
+        if status == "CHECKOUT_BY_OTHER":
+            owner = str(holder.get("checkout_owner_user", "") or "").strip() or "altro utente"
+            host_h = str(holder.get("checkout_owner_host", "") or "").strip()
+            msg = f"Documento in CHECK-OUT da {owner}" + (f" su {host_h}" if host_h else "") + "."
+            self._log_activity(
+                action="CHECKOUT",
+                code=code_u,
+                status="LOCKED",
+                message=msg,
+                details={"holder": holder},
+            )
+            if show_feedback:
+                warn(msg)
+            return False
+
+        msg = str(status or "CHECK-OUT non riuscito.")
+        self._log_activity(
+            action="CHECKOUT",
+            code=code_u,
+            status="WARN",
+            message=msg,
+            details={"holder": holder},
+        )
+        if show_feedback:
+            warn(msg)
+        return False
+
+    def _checkin_document(self, code: str, show_feedback: bool = True, force: bool = False, refresh_ui: bool = True) -> bool:
+        code_u = (code or "").strip()
+        if not code_u:
+            if show_feedback:
+                warn("Seleziona un codice.")
+            return False
+        user, _host = self._checkout_identity()
+        ok, status, holder = self.store.checkin_document(code_u, owner_user=user, force=force)
+        if ok:
+            msg = "Documento messo in CHECK-IN." if status != "CHECKIN_ALREADY" else "Documento gia in CHECK-IN."
+            self._log_activity(
+                action="CHECKIN",
+                code=code_u,
+                status="OK",
+                message=msg,
+                details={"status_code": status},
+            )
+            if show_feedback:
+                info(msg)
+            if refresh_ui:
+                self._refresh_all()
+            return True
+
+        if status == "CHECKOUT_BY_OTHER":
+            owner = str(holder.get("checkout_owner_user", "") or "").strip() or "altro utente"
+            host_h = str(holder.get("checkout_owner_host", "") or "").strip()
+            msg = f"CHECK-IN non consentito: documento in CHECK-OUT da {owner}" + (f" su {host_h}" if host_h else "") + "."
+            self._log_activity(
+                action="CHECKIN",
+                code=code_u,
+                status="LOCKED",
+                message=msg,
+                details={"holder": holder},
+            )
+            if show_feedback:
+                warn(msg)
+            return False
+
+        msg = str(status or "CHECK-IN non riuscito.")
+        self._log_activity(
+            action="CHECKIN",
+            code=code_u,
+            status="WARN",
+            message=msg,
+            details={"holder": holder},
+        )
+        if show_feedback:
+            warn(msg)
+        return False
+
+    def _checkout_selected_document(self):
+        code = self._get_workflow_or_selected_code()
+        if not code:
+            warn("Seleziona un codice in Consultazione o nel pannello Workflow.")
+            return
+        self._checkout_document(code, show_feedback=True)
+
+    def _checkin_selected_document(self):
+        code = self._get_workflow_or_selected_code()
+        if not code:
+            warn("Seleziona un codice in Consultazione o nel pannello Workflow.")
+            return
+        self._checkin_document(code, show_feedback=True)
+
     def _read_local_settings(self) -> dict:
         try:
             if LOCAL_SETTINGS_PATH.exists():
@@ -444,6 +647,7 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         self.cfg = self.cfg_mgr.load()
         self.store = Store(self.ws_mgr.db_path(self.ws_id))
         self.backup = BackupManager(self.ws_mgr, self.ws_id, self.store, retention_total=self.cfg.backup.retention_total)
+        self._rebind_workspace_context_to_tabs(refresh_sw_tab=True)
         self._save_local_settings()
         self._refresh_all()
         self._log_activity("SHARED_ROOT_SWITCH", status="OK", message=f"{old_root} -> {self.shared_root}")
@@ -1287,9 +1491,14 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
 
     # Metodo _generate_document() rimosso - ora gestito da TabCodifica
 
-    def _create_files_for_code(self, code: str, create_drw: bool | None = None, only_missing: bool = False):
+    def _create_files_for_code(self, code: str, create_drw: bool | None = None, only_missing: bool = False, require_checkout: bool = True):
         doc = self.store.get_document(code)
         if not doc:
+            return
+        if str(doc.state or "").strip().upper() != "WIP":
+            warn("Creazione file consentita solo per documenti in stato WIP.")
+            return
+        if require_checkout and not self._require_checkout_for_edit(doc, "Creazione file"):
             return
         if not self.cfg.solidworks.archive_root:
             warn("Archivio non impostato (tab SolidWorks).")
@@ -1328,6 +1537,7 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
                 warn("Template DRW non impostato (tab SolidWorks).")
                 return
 
+        self._apply_sldreg_before_sw_launch(code=doc.code, open_source="CREATE_FILES", kind="MODEL")
         sw, res = get_solidworks_app(visible=False, timeout_s=30.0)
         if not res.ok or sw is None:
             warn(res.message + ("\n\n" + res.details if res.details else ""))
@@ -1369,7 +1579,9 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
 
         try:
             if out_model.is_file() or created_model:
-                self._sync_sw_to_pdm(doc.code)
+                doc_sync = self.store.get_document(doc.code) or doc
+                if bool(getattr(doc_sync, "checked_out", False)) and self._is_doc_checked_out_by_me(doc_sync):
+                    self._sync_sw_to_pdm(doc.code)
         except Exception:
             pass
 
@@ -1600,10 +1812,24 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
 
     def _get_table_selected_code(self) -> str:
         """Ritorna il codice selezionato dalla tabella attiva (preferisce Ricerca&Consultazione)."""
+        # Tab Operativo (fonte primaria): usa helper del tab se disponibile
+        try:
+            t = getattr(self, "tab_operativo_obj", None)
+            if t is not None and hasattr(t, "_get_selected_rc_code"):
+                code = str(t._get_selected_rc_code() or "").strip()
+                if code:
+                    return code
+        except Exception:
+            pass
+
         # Nuova tab unificata
         if hasattr(self, "rc_table") and getattr(self, "rc_table", None) is not None:
             try:
                 sel = self.rc_table.tree.selection()
+                if not sel:
+                    fid = self.rc_table.tree.focus()
+                    if fid:
+                        sel = (fid,)
                 if not sel:
                     return ""
                 vals = self.rc_table.tree.item(sel[0]).get("values", [])
@@ -1653,8 +1879,8 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         - props: lista nomi proprieta SW (uppercase) da leggere dal DB (doc_custom_values)
         - key_index: indice della colonna 'code' (chiave univoca)
         """
-        base_cols = ["m_ok", "d_ok", "code", "doc_type", "revision", "state", "description"]
-        base_heads = ["M", "D", "CODICE", "TIPO", "REV", "STATO", "DESCRIZIONE"]
+        base_cols = ["m_ok", "d_ok", "code", "doc_type", "revision", "state", "check_state", "description"]
+        base_heads = ["M", "D", "CODICE", "TIPO", "REV", "STATO", "CHECK", "DESCRIZIONE"]
 
         # proprieta SW da leggere configurate in Tab SolidWorks
         props = []
@@ -1772,16 +1998,179 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
                 cdict = custom_bulk.get(d.code, {})
                 for pn in props:
                     vals.append(cdict.get(pn, ""))
-            row_values = [m_ok, d_ok, d.code, d.doc_type, rev, d.state, d.description, *vals]
+            row_values = [m_ok, d_ok, d.code, d.doc_type, rev, d.state, self._checkout_table_value(d), d.description, *vals]
             row_tag = self._state_row_tag(d.state)
             rows.append({"values": row_values, "tags": (row_tag,) if row_tag else ()})
 
         if hasattr(self, "docs_table") and self.docs_table is not None:
             self.docs_table.set_rows(rows)
 
+    def _is_solidworks_process_running(self) -> bool:
+        """Verifica leggera processo SolidWorks senza aprire istanze COM."""
+        try:
+            cp = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq SLDWORKS.exe"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            out = f"{cp.stdout}\n{cp.stderr}".casefold()
+            return "sldworks.exe" in out
+        except Exception:
+            return False
+
+    def _apply_sldreg_before_sw_launch(self, *, code: str, open_source: str, kind: str) -> None:
+        """Applica import .sldreg filtrato solo prima dell'avvio di SolidWorks."""
+        sw_cfg = getattr(self.cfg, "solidworks", None)
+        if sw_cfg is None:
+            return
+        if not bool(getattr(sw_cfg, "sldreg_enabled", False)):
+            return
+
+        sldreg_file = str(getattr(sw_cfg, "sldreg_file", "") or "").strip()
+        cleanup = bool(getattr(sw_cfg, "sldreg_cleanup_before_import", True))
+        restore_options = SldregRestoreOptions(
+            system_options=bool(getattr(sw_cfg, "sldreg_restore_system_options", True)),
+            toolbar_layout=bool(getattr(sw_cfg, "sldreg_restore_toolbar_layout", True)),
+            toolbar_mode=str(getattr(sw_cfg, "sldreg_restore_toolbar_mode", "all")),
+            keyboard_shortcuts=bool(getattr(sw_cfg, "sldreg_restore_keyboard_shortcuts", True)),
+            mouse_gestures=bool(getattr(sw_cfg, "sldreg_restore_mouse_gestures", True)),
+            menu_customizations=bool(getattr(sw_cfg, "sldreg_restore_menu_customizations", True)),
+            saved_views=bool(getattr(sw_cfg, "sldreg_restore_saved_views", True)),
+        )
+
+        if not sldreg_file:
+            self._log_activity(
+                action="SW_SLDREG",
+                code=code,
+                status="WARN",
+                message="Gestione .sldreg attiva ma file non configurato. Avvio pulito.",
+                details={"open_source": open_source, "kind": kind},
+            )
+            return
+
+        source = Path(sldreg_file)
+        if not source.exists():
+            self._log_activity(
+                action="SW_SLDREG",
+                code=code,
+                status="WARN",
+                message=f"File .sldreg non trovato: {source}",
+                details={"open_source": open_source, "kind": kind, "path": str(source)},
+            )
+            return
+
+        if self._is_solidworks_process_running():
+            self._log_activity(
+                action="SW_SLDREG",
+                code=code,
+                status="SKIP",
+                message="Import .sldreg filtrato saltato: SolidWorks gia avviato.",
+                details={"open_source": open_source, "kind": kind, "path": str(source)},
+            )
+            return
+
+        ok, msg = import_sldreg_filtered(
+            source,
+            cleanup_before_import=cleanup,
+            restore_options=restore_options,
+        )
+        self._log_activity(
+            action="SW_SLDREG",
+            code=code,
+            status="OK" if ok else "WARN",
+            message=msg if ok else f"Import .sldreg non applicato: {msg}. Avvio pulito.",
+            details={
+                "open_source": open_source,
+                "kind": kind,
+                "path": str(source),
+                "cleanup_before_import": cleanup,
+                "restore_options": {
+                    "system_options": bool(restore_options.system_options),
+                    "toolbar_layout": bool(restore_options.toolbar_layout),
+                    "toolbar_mode": str(restore_options.toolbar_mode),
+                    "keyboard_shortcuts": bool(restore_options.keyboard_shortcuts),
+                    "mouse_gestures": bool(restore_options.mouse_gestures),
+                    "menu_customizations": bool(restore_options.menu_customizations),
+                    "saved_views": bool(restore_options.saved_views),
+                },
+            },
+        )
+
+    def _open_path_in_solidworks(self, *, code: str, file_path: Path, open_source: str, kind: str) -> bool:
+        """Apre un file CAD in SolidWorks.
+
+        Tenta prima apertura COM (avvia SW se chiuso), poi fallback shell.
+        """
+        p = Path(file_path)
+        if not p.exists():
+            self._log_activity(
+                action="OPEN_FILE",
+                code=code,
+                status="WARN",
+                message=f"{kind} mancante: {p.name}",
+                details={"path": str(p), "open_source": open_source, "kind": kind},
+            )
+            return False
+
+        self._apply_sldreg_before_sw_launch(code=code, open_source=open_source, kind=kind)
+
+        com_err = ""
+        try:
+            sw, res = get_solidworks_app(visible=True, timeout_s=25.0, allow_launch=True)
+            if sw is not None and res.ok:
+                opened = open_doc(sw, str(p), silent=False)
+                if opened is not None:
+                    self._log_activity(
+                        action="OPEN_FILE",
+                        code=code,
+                        status="OK",
+                        message=f"Aperto {kind} {p.name}",
+                        details={"path": str(p), "open_source": open_source, "kind": kind, "open_mode": "COM"},
+                    )
+                    return True
+                com_err = "OpenDoc6 ha restituito None."
+            else:
+                com_err = str(getattr(res, "message", "") or "SolidWorks non disponibile via COM.")
+        except Exception as e:
+            com_err = str(e)
+
+        try:
+            os.startfile(str(p))  # type: ignore[attr-defined]
+            self._log_activity(
+                action="OPEN_FILE",
+                code=code,
+                status="OK",
+                message=f"Aperto {kind} {p.name}",
+                details={
+                    "path": str(p),
+                    "open_source": open_source,
+                    "kind": kind,
+                    "open_mode": "SHELL",
+                    "com_error": com_err,
+                },
+            )
+            return True
+        except Exception as e:
+            self._log_activity(
+                action="OPEN_FILE",
+                code=code,
+                status="ERROR",
+                message=f"Errore apertura {kind} {p.name}",
+                details={
+                    "path": str(p),
+                    "open_source": open_source,
+                    "kind": kind,
+                    "open_mode": "FAILED",
+                    "com_error": com_err,
+                    "shell_error": str(e),
+                },
+            )
+            return False
+
 
     def _doc_dbl(self, code: str):
-        """Doppio click su riga: apre preferibilmente il DRW se esiste, altrimenti il MODELLO."""
+        """Doppio click su riga elenco: apre prima MODELLO, poi fallback DRW."""
         try:
             code = str(code).strip()
         except Exception:
@@ -1792,7 +2181,28 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         if not doc:
             return
 
-        # Preferisci DRW
+        model_path = ""
+        try:
+            model_path = doc.best_model_path_for_state()
+        except Exception:
+            try:
+                model_path = doc.best_path_for_state()
+            except Exception:
+                model_path = ""
+        if model_path:
+            p = Path(model_path)
+            if p.exists():
+                try:
+                    if self._open_path_in_solidworks(
+                        code=doc.code,
+                        file_path=p,
+                        open_source="RC_DOUBLE_CLICK",
+                        kind="MODEL",
+                    ):
+                        return
+                except Exception:
+                    pass
+
         drw_path = ""
         try:
             drw_path = doc.best_drw_path_for_state()
@@ -1805,54 +2215,20 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             p = Path(drw_path)
             if p.exists():
                 try:
-                    os.startfile(str(p))  # type: ignore[attr-defined]
-                    self._log_activity(
-                        action="OPEN_FILE",
+                    if self._open_path_in_solidworks(
                         code=doc.code,
-                        status="OK",
-                        message=f"Doppio click: aperto DRW {p.name}",
-                        details={"path": str(p), "open_source": "RC_DOUBLE_CLICK", "kind": "DRW"},
-                    )
-                    return
-                except Exception:
+                        file_path=p,
+                        open_source="RC_DOUBLE_CLICK",
+                        kind="DRW",
+                    ):
+                        return
+                except Exception as e:
                     self._log_activity(
                         action="OPEN_FILE",
                         code=doc.code,
                         status="ERROR",
                         message=f"Doppio click: errore apertura DRW {p.name}",
                         details={"path": str(p), "open_source": "RC_DOUBLE_CLICK", "kind": "DRW"},
-                    )
-                    pass
-
-        # Fallback MODEL
-        model_path = ""
-        try:
-            model_path = doc.best_path_for_state()
-        except Exception:
-            try:
-                model_path = doc.best_model_path_for_state()
-            except Exception:
-                model_path = ""
-        if model_path:
-            p = Path(model_path)
-            if p.exists():
-                try:
-                    os.startfile(str(p))  # type: ignore[attr-defined]
-                    self._log_activity(
-                        action="OPEN_FILE",
-                        code=doc.code,
-                        status="OK",
-                        message=f"Doppio click: aperto MODEL {p.name}",
-                        details={"path": str(p), "open_source": "RC_DOUBLE_CLICK", "kind": "MODEL"},
-                    )
-                    return
-                except Exception as e:
-                    self._log_activity(
-                        action="OPEN_FILE",
-                        code=doc.code,
-                        status="ERROR",
-                        message=f"Doppio click: errore apertura MODEL {p.name}",
-                        details={"path": str(p), "open_source": "RC_DOUBLE_CLICK", "kind": "MODEL"},
                     )
                     warn(f"Impossibile aprire il file:\n{p}\n\n{e}")
                     return
@@ -1870,13 +2246,40 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
     def _open_selected_model(self):
         code = self._get_table_selected_code()
         if not code:
-            warn("Seleziona un codice in Consultazione.")
+            warn("Seleziona un codice nell'elenco Operativo.")
             return
         doc = self.store.get_document(code)
         if not doc:
             warn("Documento non trovato.")
             return
-        path = doc.best_path_for_state()
+        candidates = []
+        try:
+            candidates.append(str(doc.best_model_path_for_state() or ""))
+        except Exception:
+            pass
+        candidates.extend([
+            str(getattr(doc, "file_wip_path", "") or ""),
+            str(getattr(doc, "file_inrev_path", "") or ""),
+            str(getattr(doc, "file_rel_path", "") or ""),
+        ])
+        seen = set()
+        ordered = []
+        for c in candidates:
+            p = str(c or "").strip()
+            if not p:
+                continue
+            k = p.lower()
+            if k in seen:
+                continue
+            seen.add(k)
+            ordered.append(p)
+        path = ""
+        for cand in ordered:
+            if Path(cand).exists():
+                path = cand
+                break
+        if not path and ordered:
+            path = ordered[0]
         if not path:
             warn("Percorso file non disponibile per questo stato.")
             return
@@ -1891,35 +2294,51 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             )
             warn(f"File non trovato:\n{p}")
             return
-        try:
-            os.startfile(str(p))  # type: ignore[attr-defined]
-            self._log_activity(
-                action="OPEN_FILE",
-                code=doc.code,
-                status="OK",
-                message=f"Aperto MODEL {p.name}",
-                details={"path": str(p), "open_source": "RC_BUTTON_MODEL", "kind": "MODEL"},
-            )
-        except Exception as e:
-            self._log_activity(
-                action="OPEN_FILE",
-                code=doc.code,
-                status="ERROR",
-                message=f"Errore apertura MODEL {p.name}",
-                details={"path": str(p), "open_source": "RC_BUTTON_MODEL", "kind": "MODEL"},
-            )
-            warn(f"Impossibile aprire il file:\n{p}\n\n{e}")
+        if not self._open_path_in_solidworks(
+            code=doc.code,
+            file_path=p,
+            open_source="RC_BUTTON_MODEL",
+            kind="MODEL",
+        ):
+            warn(f"Impossibile aprire il file:\n{p}\n\nVerifica installazione/avvio SolidWorks.")
 
     def _open_selected_drw(self):
         code = self._get_table_selected_code()
         if not code:
-            warn("Seleziona un codice in Consultazione.")
+            warn("Seleziona un codice nell'elenco Operativo.")
             return
         doc = self.store.get_document(code)
         if not doc:
             warn("Documento non trovato.")
             return
-        path = doc.best_drw_path_for_state()
+        candidates = []
+        try:
+            candidates.append(str(doc.best_drw_path_for_state() or ""))
+        except Exception:
+            pass
+        candidates.extend([
+            str(getattr(doc, "file_wip_drw_path", "") or ""),
+            str(getattr(doc, "file_inrev_drw_path", "") or ""),
+            str(getattr(doc, "file_rel_drw_path", "") or ""),
+        ])
+        seen = set()
+        ordered = []
+        for c in candidates:
+            p = str(c or "").strip()
+            if not p:
+                continue
+            k = p.lower()
+            if k in seen:
+                continue
+            seen.add(k)
+            ordered.append(p)
+        path = ""
+        for cand in ordered:
+            if Path(cand).exists():
+                path = cand
+                break
+        if not path and ordered:
+            path = ordered[0]
         if not path:
             self._log_activity(
                 action="OPEN_FILE",
@@ -1941,31 +2360,22 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             )
             warn(f"Disegno non trovato:\n{p}")
             return
-        try:
-            os.startfile(str(p))  # type: ignore[attr-defined]
-            self._log_activity(
-                action="OPEN_FILE",
-                code=doc.code,
-                status="OK",
-                message=f"Aperto DRW {p.name}",
-                details={"path": str(p), "open_source": "RC_BUTTON_DRW", "kind": "DRW"},
-            )
-        except Exception as e:
-            self._log_activity(
-                action="OPEN_FILE",
-                code=doc.code,
-                status="ERROR",
-                message=f"Errore apertura DRW {p.name}",
-                details={"path": str(p), "open_source": "RC_BUTTON_DRW", "kind": "DRW"},
-            )
-            warn(f"Impossibile aprire il disegno:\n{p}\n\n{e}")
+        if not self._open_path_in_solidworks(
+            code=doc.code,
+            file_path=p,
+            open_source="RC_BUTTON_DRW",
+            kind="DRW",
+        ):
+            warn(f"Impossibile aprire il disegno:\n{p}\n\nVerifica installazione/avvio SolidWorks.")
 
     # ---------------- Sync proprieta (PDM -> SolidWorks)
     def _sync_pdm_to_sw(self, code: str):
         """Scrive le proprieta CORE (mappatura PDM->SW) nel file SolidWorks esistente."""
         doc = self.store.get_document(code)
         if not doc:
-            return
+            return False
+        if not self._require_checkout_for_edit(doc, "Sync PDM->SW"):
+            return False
         model_path_s = ""
         try:
             model_path_s = doc.best_model_path_for_state()
@@ -1973,16 +2383,17 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             model_path_s = doc.file_rel_path or doc.file_inrev_path or doc.file_wip_path
         if not model_path_s:
             warn("Nessun file modello associato al codice.")
-            return
+            return False
 
         from pathlib import Path
         from pdm_sw.archive import set_readonly
         from pdm_sw.sw_api import open_doc, set_custom_properties, save_existing_doc, close_doc, get_solidworks_app
 
+        self._apply_sldreg_before_sw_launch(code=doc.code, open_source="SYNC_PDM_TO_SW", kind="MODEL")
         sw, res = get_solidworks_app(visible=False, timeout_s=30.0)
         if not res.ok or sw is None:
             warn(res.message + ("\n\n" + res.details if res.details else ""))
-            return
+            return False
 
         final_ro = (doc.state not in ("WIP", "IN_REV"))
         try:
@@ -1995,13 +2406,15 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             mdl = open_doc(sw, model_path_s, silent=True)
             if mdl is None:
                 warn("Impossibile aprire il file in SolidWorks.")
-                return
+                return False
             props = self._build_sw_props_for_doc(doc)  # CORE only
             set_custom_properties(mdl, props)
             save_existing_doc(mdl)
             close_doc(sw, mdl)
+            return True
         except Exception as e:
             warn(f"Sync PDM->SW fallita: {e}")
+            return False
         finally:
             try:
                 set_readonly(Path(model_path_s), final_ro)
@@ -2012,7 +2425,9 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         """Legge descrizione + proprieta custom (configurate) da SolidWorks e aggiorna PDM."""
         doc = self.store.get_document(code)
         if not doc:
-            return
+            return False
+        if not self._require_checkout_for_edit(doc, "Sync SW->PDM"):
+            return False
         model_path_s = ""
         try:
             model_path_s = doc.best_model_path_for_state()
@@ -2020,20 +2435,21 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             model_path_s = doc.file_rel_path or doc.file_inrev_path or doc.file_wip_path
         if not model_path_s:
             warn("Nessun file modello associato al codice.")
-            return
+            return False
 
         from pdm_sw.sw_api import open_doc, get_custom_properties, close_doc, get_solidworks_app
 
+        self._apply_sldreg_before_sw_launch(code=doc.code, open_source="SYNC_SW_TO_PDM", kind="MODEL")
         sw, res = get_solidworks_app(visible=False, timeout_s=30.0)
         if not res.ok or sw is None:
             warn(res.message + ("\n\n" + res.details if res.details else ""))
-            return
+            return False
 
         try:
             mdl = open_doc(sw, model_path_s, silent=True)
             if mdl is None:
                 warn("Impossibile aprire il file in SolidWorks.")
-                return
+                return False
             props = get_custom_properties(mdl) or {}
             up = {str(k).strip().upper(): str(v) for k, v in props.items()}
 
@@ -2054,24 +2470,26 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
                 self.store.set_custom_value(code, pn, val)
 
             close_doc(sw, mdl)
+            return True
         except Exception as e:
             warn(f"Sync SW->PDM fallita: {e}")
+            return False
 
     def _force_pdm_to_sw_selected(self):
-        code = self._get_table_selected_code()
+        code = self._get_workflow_or_selected_code()
         if not code:
-            warn("Seleziona un codice in Consultazione.")
+            warn("Seleziona un codice in Consultazione o nel pannello Workflow.")
             return
-        self._sync_pdm_to_sw(code)
-        info("Sync PDM->SolidWorks completata (best-effort).")
+        if self._sync_pdm_to_sw(code):
+            info("Sync PDM->SolidWorks completata (best-effort).")
 
     def _force_sw_to_pdm_selected(self):
-        code = self._get_table_selected_code()
+        code = self._get_workflow_or_selected_code()
         if not code:
-            warn("Seleziona un codice in Consultazione.")
+            warn("Seleziona un codice in Consultazione o nel pannello Workflow.")
             return
-        self._sync_sw_to_pdm(code)
-        info("Lettura SolidWorks->PDM completata (best-effort).")
+        if self._sync_sw_to_pdm(code):
+            info("Lettura SolidWorks->PDM completata (best-effort).")
 
     def _create_files_for_selected(self):
         code = self._get_table_selected_code()
@@ -2335,7 +2753,7 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             # M: esistenza modello (.sldprt/.sldasm), D: esistenza disegno (.slddrw)
             m_ok, d_ok = self._model_and_drawing_flags(d)
 
-            base = [m_ok, d_ok, d.code, d.doc_type, d.revision, d.state, d.description]
+            base = [m_ok, d_ok, d.code, d.doc_type, d.revision, d.state, self._checkout_table_value(d), d.description]
             # append SW dynamic values in same order as props
             extra = []
             for p in props:
@@ -2374,17 +2792,24 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             _set("wf_btn_cancel", False)
             _set("wf_btn_obsolete", False)
             _set("wf_btn_restore_obs", False)
+            _set("wf_btn_checkout", False)
+            _set("wf_btn_checkin", False)
             return
 
         state = str(getattr(doc, "state", "") or "").strip().upper()
         prev_state = str(getattr(doc, "obs_prev_state", "") or "").strip().upper()
+        is_checked_out = bool(getattr(doc, "checked_out", False))
+        is_checkout_mine = self._is_doc_checked_out_by_me(doc)
+        can_checkout_state = state in ("WIP", "IN_REV")
 
-        _set("wf_btn_release", state == "WIP")
+        _set("wf_btn_release", state == "WIP" and is_checked_out and is_checkout_mine)
         _set("wf_btn_create_rev", state == "REL")
-        _set("wf_btn_approve", state == "IN_REV")
-        _set("wf_btn_cancel", state == "IN_REV")
+        _set("wf_btn_approve", state == "IN_REV" and is_checked_out and is_checkout_mine)
+        _set("wf_btn_cancel", state == "IN_REV" and is_checked_out and is_checkout_mine)
         _set("wf_btn_obsolete", state in ("WIP", "REL", "IN_REV"))
         _set("wf_btn_restore_obs", state == "OBS" and prev_state in ("WIP", "REL", "IN_REV"))
+        _set("wf_btn_checkout", can_checkout_state and ((not is_checked_out) or is_checkout_mine))
+        _set("wf_btn_checkin", can_checkout_state and is_checked_out and is_checkout_mine)
 
     def _refresh_workflow_panel(self):
         doc = self._load_selected_doc()
@@ -2394,7 +2819,7 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             self._update_workflow_buttons(None)
             return
         self._update_workflow_buttons(doc)
-        self.wf_state_var.set(f"Stato: {doc.state}  Rev: {doc.revision:02d}")
+        self.wf_state_var.set(f"Stato: {doc.state}  Rev: {doc.revision:02d}  | {self._checkout_status_label(doc)}")
         self.wf_info.delete("1.0", "end")
         def _shown_path(path_s: str) -> str:
             try:
@@ -2407,6 +2832,9 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         self.wf_info.insert("end", f"Seq: {doc.seq:04d}\n")
         self.wf_info.insert("end", f"VVV: {doc.vvv}\n")
         self.wf_info.insert("end", f"Descrizione: {doc.description}\n")
+        created_ts = str(getattr(doc, "created_at", "") or "").replace("T", " ").strip()
+        self.wf_info.insert("end", f"Creato il: {created_ts if created_ts else '(n/d)'}\n")
+        self.wf_info.insert("end", f"CHECK: {self._checkout_status_label(doc)}\n")
         if getattr(doc, "obs_prev_state", ""):
             self.wf_info.insert("end", f"Stato precedente OBS: {doc.obs_prev_state}\n")
         self.wf_info.insert("end", "\n")
@@ -2544,15 +2972,32 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
     def _close_sw_docs_for_workflow(self, doc: Document) -> None:
         """Best effort: chiude eventuali documenti SW aperti coinvolti nel workflow."""
         try:
-            from pdm_sw.sw_api import close_doc, save_existing_doc
+            from pdm_sw.sw_api import close_doc, save_existing_doc, _find_running_sw_apps
         except Exception:
             return
+
+        apps = []
         try:
             sw, res = get_solidworks_app(visible=False, timeout_s=3.0, allow_launch=False)
+            if res.ok and sw is not None:
+                apps.append(sw)
         except Exception:
+            pass
+        try:
+            apps.extend(list(_find_running_sw_apps() or []))
+        except Exception:
+            pass
+        if not apps:
             return
-        if not res.ok or sw is None:
-            return
+
+        uniq_apps = {}
+        for sw in apps:
+            try:
+                pid = int(sw.GetProcessID())
+            except Exception:
+                pid = id(sw)
+            uniq_apps[pid] = sw
+        apps = list(uniq_apps.values())
 
         candidates = [
             doc.file_wip_path,
@@ -2562,26 +3007,41 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             doc.file_rel_drw_path,
             doc.file_inrev_drw_path,
         ]
+        uniq_paths = []
+        seen = set()
         for p in candidates:
             p = str(p or "").strip()
             if not p:
                 continue
-            od = None
-            try:
-                if hasattr(sw, "GetOpenDocumentByName"):
-                    od = sw.GetOpenDocumentByName(p)
-            except Exception:
-                od = None
-            if od is None:
+            key = p.lower()
+            if key in seen:
                 continue
-            try:
-                save_existing_doc(od)
-            except Exception:
-                pass
-            try:
-                close_doc(sw, doc=od, file_path=p)
-            except Exception:
-                pass
+            seen.add(key)
+            uniq_paths.append(p)
+
+        for sw in apps:
+            for p in uniq_paths:
+                od = None
+                try:
+                    if hasattr(sw, "GetOpenDocumentByName"):
+                        od = sw.GetOpenDocumentByName(p)
+                except Exception:
+                    od = None
+                if od is None:
+                    try:
+                        if hasattr(sw, "GetOpenDocumentByName"):
+                            od = sw.GetOpenDocumentByName(Path(p).name)
+                    except Exception:
+                        od = None
+                if od is not None:
+                    try:
+                        save_existing_doc(od)
+                    except Exception:
+                        pass
+                try:
+                    close_doc(sw, doc=od, file_path=p)
+                except Exception:
+                    pass
 
     def _run_workflow_transition(self, action_label: str, fn, *args, **kwargs):
         locked_code = ""
@@ -2636,6 +3096,11 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         doc = self._load_selected_doc()
         if not doc:
             return
+        if str(doc.state or "").strip().upper() != "WIP":
+            warn("Per release serve stato WIP.")
+            return
+        if not self._require_wip_checkout(doc, "Release"):
+            return
         from_state = doc.state
         rev_before = int(doc.revision)
         note = self._prompt_workflow_note(doc.code, "Release", from_state, "REL")
@@ -2662,8 +3127,7 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         except Exception as e:
             warn(f"Cambio stato eseguito, ma salvataggio nota fallito: {e}")
         try:
-            self._sync_pdm_to_sw(doc.code)
-            self._sync_sw_to_pdm(doc.code)
+            self.store.clear_document_checkout(doc.code)
         except Exception:
             pass
         self._wf_backup_event("release")
@@ -2711,6 +3175,8 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         if doc.state != "IN_REV":
             warn("Per approvare serve stato IN_REV.")
             return
+        if not self._require_checkout_for_edit(doc, "Approvazione revisione"):
+            return
         from_state = doc.state
         rev_before = int(doc.revision)
         note = self._prompt_workflow_note(doc.code, "Approva revisione", from_state, "REL")
@@ -2737,7 +3203,7 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         except Exception as e:
             warn(f"Cambio stato eseguito, ma salvataggio nota fallito: {e}")
         try:
-            self._sync_sw_to_pdm(doc.code)
+            self.store.clear_document_checkout(doc.code)
         except Exception:
             pass
         self._wf_backup_event("approve_rev")
@@ -2749,6 +3215,8 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             return
         if doc.state != "IN_REV":
             warn("Per annullare serve stato IN_REV.")
+            return
+        if not self._require_checkout_for_edit(doc, "Annullamento revisione"):
             return
         from_state = doc.state
         rev_before = int(doc.revision)
@@ -2775,6 +3243,10 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             )
         except Exception as e:
             warn(f"Cambio stato eseguito, ma salvataggio nota fallito: {e}")
+        try:
+            self.store.clear_document_checkout(doc.code)
+        except Exception:
+            pass
         self._wf_backup_event("cancel_rev")
         self._refresh_all()
 
@@ -2808,6 +3280,10 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             )
         except Exception as e:
             warn(f"Cambio stato eseguito, ma salvataggio nota fallito: {e}")
+        try:
+            self.store.clear_document_checkout(doc.code)
+        except Exception:
+            pass
         self._wf_backup_event("obsolete")
         self._refresh_all()
 
@@ -2847,7 +3323,12 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             )
         except Exception as e:
             warn(f"Cambio stato eseguito, ma salvataggio nota fallito: {e}")
+        try:
+            self.store.clear_document_checkout(doc.code)
+        except Exception:
+            pass
         self._wf_backup_event("restore_obs")
+        self._refresh_all()
 
     # ---------------- Tab: Monitor
     # ESTRATTO IN: pdm_sw/gui/tab_monitor.py -> TabMonitor
@@ -3131,8 +3612,101 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
             hover_color="#991b1b",
             command=lambda: _open_and_close("_delete_workspace_dialog"),
         ).grid(row=2, column=0, columnspan=2, sticky="ew", padx=6, pady=6)
+        ctk.CTkButton(
+            grid,
+            text="MIGRA ARCHIVIO CAD",
+            fg_color="#0B5ED7",
+            hover_color="#0A58CA",
+            command=lambda: _open_and_close("_migrate_archive_layout_dialog"),
+        ).grid(row=3, column=0, columnspan=2, sticky="ew", padx=6, pady=6)
 
         ctk.CTkButton(dlg, text="Chiudi", width=120, command=dlg.destroy).pack(side="right", padx=12, pady=12)
+
+    def _migrate_archive_layout_dialog(self):
+        archive_root = str(getattr(self.cfg.solidworks, "archive_root", "") or "").strip()
+        if not archive_root:
+            warn("Archivio non configurato (tab SolidWorks).")
+            return
+        self._log_activity("ARCHIVE_MIGRATION_DRYRUN", status="OK", message="Avvio analisi layout archivio.")
+
+        try:
+            preview = run_archive_layout_migration(
+                store=self.store,
+                archive_root=archive_root,
+                apply_changes=False,
+            )
+        except Exception as e:
+            warn(f"Analisi migrazione fallita: {e}")
+            return
+
+        if not preview.get("ok", False):
+            errs = preview.get("errors", []) or []
+            msg = "Analisi migrazione completata con errori.\n"
+            if errs:
+                msg += "\n" + "\n".join(str(x) for x in errs[:12])
+            warn(msg)
+            return
+
+        conflicts = preview.get("conflicts", []) or []
+        sample_moves = preview.get("sample_moves", []) or []
+        msg = (
+            "Analisi layout archivio completata.\n\n"
+            f"Documenti analizzati: {int(preview.get('docs_scanned', 0))}\n"
+            f"Documenti da aggiornare DB: {int(preview.get('docs_to_update', 0))}\n"
+            f"Spostamenti pianificati: {int(preview.get('moves_planned', 0))}\n"
+            f"Conflitti rilevati: {len(conflicts)}\n\n"
+        )
+        if sample_moves:
+            msg += "Esempi spostamenti:\n" + "\n".join(str(x) for x in sample_moves[:8]) + "\n\n"
+        if conflicts:
+            msg += "Conflitti (estratto):\n" + "\n".join(str(x) for x in conflicts[:8]) + "\n\n"
+            msg += "Risolvi i conflitti e riesegui.\n"
+            warn(msg)
+            return
+
+        if not ask(msg + "Eseguire ORA la migrazione archivio?"):
+            return
+
+        bkp = self.backup.backup_now("archive_layout_migration", force=True)
+        if not bkp.ok:
+            self._log_activity("ARCHIVE_MIGRATION", status="ERROR", message=f"Backup fallito: {bkp.message}")
+            warn(f"Backup pre-migrazione fallito: {bkp.message}")
+            return
+
+        try:
+            result = run_archive_layout_migration(
+                store=self.store,
+                archive_root=archive_root,
+                apply_changes=True,
+            )
+        except Exception as e:
+            self._log_activity("ARCHIVE_MIGRATION", status="ERROR", message=str(e))
+            warn(f"Migrazione archivio fallita: {e}")
+            return
+
+        if not result.get("ok", False):
+            errs = result.get("errors", []) or []
+            self._log_activity("ARCHIVE_MIGRATION", status="ERROR", message="Migrazione con errori.")
+            warn(
+                "Migrazione completata con errori.\n\n"
+                + "\n".join(str(x) for x in errs[:12])
+            )
+            self._refresh_all()
+            return
+
+        self._log_activity(
+            "ARCHIVE_MIGRATION",
+            status="OK",
+            message=f"done={int(result.get('moves_done', 0))} docs={int(result.get('docs_updated', 0))}",
+        )
+        self._refresh_all()
+        info(
+            "Migrazione archivio completata.\n\n"
+            f"Documenti aggiornati: {int(result.get('docs_updated', 0))}\n"
+            f"Spostamenti eseguiti: {int(result.get('moves_done', 0))}\n"
+            f"Spostamenti mancanti (sorgente assente): {int(result.get('moves_missing', 0))}\n"
+            f"Backup: {bkp.path or '(ok)'}"
+        )
 
     def _change_workspace_dialog(self):
         dlg = ctk.CTkToplevel(self)
@@ -3319,6 +3893,33 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
 
         ctk.CTkButton(dlg, text="Cancella", fg_color="#b91c1c", hover_color="#991b1b", command=_ok).pack(pady=14)
 
+    def _rebind_workspace_context_to_tabs(self, refresh_sw_tab: bool = False) -> None:
+        """Aggiorna i riferimenti cfg/store nei tab in base alla workspace corrente."""
+        tab_names = (
+            "tab_generatore_obj",
+            "tab_codifica_obj",
+            "tab_gestione_codifica_obj",
+            "tab_solidworks_obj",
+            "tab_gerarchia_obj",
+            "tab_monitor_obj",
+            "tab_operativo_obj",
+            "tab_manuale_obj",
+        )
+        for tab_name in tab_names:
+            tab = getattr(self, tab_name, None)
+            if not tab:
+                continue
+            try:
+                tab.store = self.store
+                tab.cfg = self.cfg
+            except Exception:
+                pass
+        if refresh_sw_tab and getattr(self, "tab_solidworks_obj", None):
+            try:
+                self.tab_solidworks_obj.refresh()
+            except Exception:
+                pass
+
     # ---------------- Workspace switch
     def _switch_workspace(self, ws_id: str):
         if ws_id == self.ws_id:
@@ -3359,30 +3960,7 @@ class PDMApp(RCCopyMixin, ReportMixin, ctk.CTk):
         self.backup = BackupManager(self.ws_mgr, ws_id, self.store, retention_total=self.cfg.backup.retention_total)
 
         # Aggiorna riferimenti store/cfg nei tab modulari dopo switch workspace
-        if hasattr(self, 'tab_generatore_obj') and self.tab_generatore_obj:
-            self.tab_generatore_obj.store = self.store
-            self.tab_generatore_obj.cfg = self.cfg
-        if hasattr(self, 'tab_codifica_obj') and self.tab_codifica_obj:
-            self.tab_codifica_obj.store = self.store
-            self.tab_codifica_obj.cfg = self.cfg
-        if hasattr(self, 'tab_gestione_codifica_obj') and self.tab_gestione_codifica_obj:
-            self.tab_gestione_codifica_obj.store = self.store
-            self.tab_gestione_codifica_obj.cfg = self.cfg
-        if hasattr(self, 'tab_solidworks_obj') and self.tab_solidworks_obj:
-            self.tab_solidworks_obj.store = self.store
-            self.tab_solidworks_obj.cfg = self.cfg
-        if hasattr(self, 'tab_gerarchia_obj') and self.tab_gerarchia_obj:
-            self.tab_gerarchia_obj.store = self.store
-            self.tab_gerarchia_obj.cfg = self.cfg
-        if hasattr(self, 'tab_monitor_obj') and self.tab_monitor_obj:
-            self.tab_monitor_obj.store = self.store
-            self.tab_monitor_obj.cfg = self.cfg
-        if hasattr(self, 'tab_operativo_obj') and self.tab_operativo_obj:
-            self.tab_operativo_obj.store = self.store
-            self.tab_operativo_obj.cfg = self.cfg
-        if hasattr(self, 'tab_manuale_obj') and self.tab_manuale_obj:
-            self.tab_manuale_obj.store = self.store
-            self.tab_manuale_obj.cfg = self.cfg
+        self._rebind_workspace_context_to_tabs(refresh_sw_tab=True)
 
         self._refresh_all()
         self._log_activity("WORKSPACE_SWITCH", status="OK", message=f"{old_ws} -> {self.ws_id}")

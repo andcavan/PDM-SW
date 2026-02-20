@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple
 import os
 import shutil
 import stat
@@ -10,6 +10,9 @@ import time
 from datetime import datetime
 
 from .models import Document, DocType
+
+IN_REV_DIR = "IN_REV"
+REV_DIR = "REV"
 
 
 def ext_for_doc_type(doc_type: DocType) -> str:
@@ -42,41 +45,44 @@ def set_readonly(path: Path, readonly: bool = True) -> None:
 
 
 def archive_dirs(archive_root: str, mmm: str, gggg: str) -> Tuple[Path, Path, Path, Path]:
+    """Ritorna (current_as_wip, current_as_rel, in_rev, rev).
+
+    Nuovo layout:
+    - file correnti WIP/REL direttamente in base (stesso path/nome)
+    - revisioni in IN_REV e REV
+    """
     root = Path(archive_root)
     base = root / mmm / gggg
-    wip = base / "wip"
-    rel = base / "rel"
-    inrev = base / "inrev"
-    rev = base / "rev"
-    for p in (wip, rel, inrev, rev):
+    current = base
+    inrev = base / IN_REV_DIR
+    rev = base / REV_DIR
+    for p in (current, inrev, rev):
         ensure_dir(p)
-    return wip, rel, inrev, rev
+    return current, current, inrev, rev
 
 
 def archive_dirs_for_machine(archive_root: str, mmm: str) -> Tuple[Path, Path, Path, Path]:
     """Cartelle archivio per MACHINE (solo MMM, senza GGGG)."""
     root = Path(archive_root)
-    base = root / "MACHINES" / mmm
-    wip = base / "wip"
-    rel = base / "rel"
-    inrev = base / "inrev"
-    rev = base / "rev"
-    for p in (wip, rel, inrev, rev):
+    base = root / mmm
+    current = base
+    inrev = base / IN_REV_DIR
+    rev = base / REV_DIR
+    for p in (current, inrev, rev):
         ensure_dir(p)
-    return wip, rel, inrev, rev
+    return current, current, inrev, rev
 
 
 def archive_dirs_for_group(archive_root: str, mmm: str, gggg: str) -> Tuple[Path, Path, Path, Path]:
     """Cartelle archivio per GROUP (MMM_GGGG)."""
     root = Path(archive_root)
-    base = root / "GROUPS" / mmm / gggg
-    wip = base / "wip"
-    rel = base / "rel"
-    inrev = base / "inrev"
-    rev = base / "rev"
-    for p in (wip, rel, inrev, rev):
+    base = root / mmm / gggg
+    current = base
+    inrev = base / IN_REV_DIR
+    rev = base / REV_DIR
+    for p in (current, inrev, rev):
         ensure_dir(p)
-    return wip, rel, inrev, rev
+    return current, current, inrev, rev
 
 
 def model_path(folder: Path, code: str, doc_type: DocType) -> Path:
@@ -141,6 +147,23 @@ def safe_copy(src: Path, dst: Path, overwrite: bool = False, log_file: str | Pat
         safe_delete(dst, strict=True, log_file=log_file)
     _run_with_retries(lambda: shutil.copy2(src, dst))
     _append_log(log_file, f"FS COPY OK | {src} -> {dst}")
+
+
+def safe_copy_replace(src: Path, dst: Path, log_file: str | Path | None = None) -> None:
+    """Sovrascrive dst tramite copia diretta senza delete/rename.
+
+    Utile su Windows quando un file sorgente/destinazione e aperto senza share-delete:
+    rename/move puo fallire con WinError 32, mentre la copia diretta puo riuscire.
+    """
+    if not src.exists():
+        _append_log(log_file, f"FS COPY_REPLACE SKIP (src missing) | {src} -> {dst}")
+        return
+    ensure_dir(dst.parent)
+    _append_log(log_file, f"FS COPY_REPLACE START | {src} -> {dst}")
+    if dst.exists():
+        set_readonly(dst, False)
+    _run_with_retries(lambda: shutil.copy2(src, dst), attempts=30, delay_s=0.25)
+    _append_log(log_file, f"FS COPY_REPLACE OK | {src} -> {dst}")
 
 
 def safe_move(src: Path, dst: Path, overwrite: bool = False, log_file: str | Path | None = None) -> None:
@@ -212,30 +235,40 @@ def release_wip(doc: Document, archive_root: str, log_file: str | Path | None = 
         _append_log(log_file, "WF FAIL RELEASE | archivio non configurato")
         return doc, WorkflowResult(False, "Archivio non configurato (SolidWorks > Archivio).")
 
-    wip, rel, inrev, rev = archive_dirs(archive_root, doc.mmm, doc.gggg)
+    current, _rel, _inrev, _rev = archive_dirs(archive_root, doc.mmm, doc.gggg)
 
-    src_model = Path(doc.file_wip_path) if doc.file_wip_path else model_path(wip, doc.code, doc.doc_type)
-    dst_model = model_path(rel, doc.code, doc.doc_type)
+    src_model = Path(doc.file_wip_path) if doc.file_wip_path else model_path(current, doc.code, doc.doc_type)
+    dst_model = model_path(current, doc.code, doc.doc_type)
 
-    src_drw = Path(doc.file_wip_drw_path) if doc.file_wip_drw_path else drw_path(wip, doc.code)
-    dst_drw = drw_path(rel, doc.code)
+    src_drw = Path(doc.file_wip_drw_path) if doc.file_wip_drw_path else drw_path(current, doc.code)
+    dst_drw = drw_path(current, doc.code)
 
     if src_model.exists():
         safe_move(src_model, dst_model, overwrite=True, log_file=log_file)
         set_readonly(dst_model, True)
         doc.file_rel_path = str(dst_model)
-        doc.file_wip_path = ""
+        doc.file_wip_path = str(dst_model)
     else:
         # allow release without file
-        doc.file_rel_path = str(dst_model) if doc.file_rel_path else ""
+        if doc.file_rel_path or doc.file_wip_path:
+            doc.file_rel_path = str(dst_model)
+            doc.file_wip_path = str(dst_model)
+        else:
+            doc.file_rel_path = ""
+            doc.file_wip_path = ""
 
     if src_drw.exists():
         safe_move(src_drw, dst_drw, overwrite=True, log_file=log_file)
         set_readonly(dst_drw, True)
         doc.file_rel_drw_path = str(dst_drw)
-        doc.file_wip_drw_path = ""
+        doc.file_wip_drw_path = str(dst_drw)
     else:
-        doc.file_rel_drw_path = doc.file_rel_drw_path or ""
+        if doc.file_rel_drw_path or doc.file_wip_drw_path:
+            doc.file_rel_drw_path = str(dst_drw)
+            doc.file_wip_drw_path = str(dst_drw)
+        else:
+            doc.file_rel_drw_path = ""
+            doc.file_wip_drw_path = ""
 
     doc.state = "REL"
     # first release keeps revision as is (default 0 => 00)
@@ -253,13 +286,17 @@ def create_inrev(doc: Document, archive_root: str, log_file: str | Path | None =
         _append_log(log_file, "WF FAIL CREATE_INREV | archivio non configurato")
         return doc, WorkflowResult(False, "Archivio non configurato (SolidWorks > Archivio).")
 
-    wip, rel, inrev, rev = archive_dirs(archive_root, doc.mmm, doc.gggg)
+    current, _rel, inrev, _rev = archive_dirs(archive_root, doc.mmm, doc.gggg)
     tag = inrev_tag(doc.code, doc.revision)
 
-    src_model = Path(doc.file_rel_path) if doc.file_rel_path else model_path(rel, doc.code, doc.doc_type)
+    src_model = Path(doc.file_rel_path) if doc.file_rel_path else (
+        Path(doc.file_wip_path) if doc.file_wip_path else model_path(current, doc.code, doc.doc_type)
+    )
     dst_model = model_path(inrev, tag, doc.doc_type)
 
-    src_drw = Path(doc.file_rel_drw_path) if doc.file_rel_drw_path else drw_path(rel, doc.code)
+    src_drw = Path(doc.file_rel_drw_path) if doc.file_rel_drw_path else (
+        Path(doc.file_wip_drw_path) if doc.file_wip_drw_path else drw_path(current, doc.code)
+    )
     dst_drw = drw_path(inrev, tag)
 
     if src_model.exists():
@@ -291,14 +328,18 @@ def approve_inrev(doc: Document, archive_root: str, log_file: str | Path | None 
         _append_log(log_file, "WF FAIL APPROVE_INREV | archivio non configurato")
         return doc, WorkflowResult(False, "Archivio non configurato (SolidWorks > Archivio).")
 
-    wip, rel, inrev, rev = archive_dirs(archive_root, doc.mmm, doc.gggg)
+    current, _rel, inrev, rev = archive_dirs(archive_root, doc.mmm, doc.gggg)
 
     # move current REL to REV with rev tag
     cur_rev = doc.revision
     rel_tag = rev_tag(doc.code, cur_rev)
 
-    rel_model = Path(doc.file_rel_path) if doc.file_rel_path else model_path(rel, doc.code, doc.doc_type)
-    rel_drw = Path(doc.file_rel_drw_path) if doc.file_rel_drw_path else drw_path(rel, doc.code)
+    rel_model = Path(doc.file_rel_path) if doc.file_rel_path else (
+        Path(doc.file_wip_path) if doc.file_wip_path else model_path(current, doc.code, doc.doc_type)
+    )
+    rel_drw = Path(doc.file_rel_drw_path) if doc.file_rel_drw_path else (
+        Path(doc.file_wip_drw_path) if doc.file_wip_drw_path else drw_path(current, doc.code)
+    )
     rev_model_dst = model_path(rev, rel_tag, doc.doc_type)
     rev_drw_dst = drw_path(rev, rel_tag)
 
@@ -309,32 +350,61 @@ def approve_inrev(doc: Document, archive_root: str, log_file: str | Path | None 
         _append_log(log_file, f"WF FAIL APPROVE_INREV | drawing revisione gia presente: {rev_drw_dst}")
         return doc, WorkflowResult(False, f"Disegno revisione gia presente in archivio REV: {rev_drw_dst}")
 
-    if rel_model.exists():
-        safe_move(rel_model, rev_model_dst, overwrite=False, log_file=log_file)
-        set_readonly(rev_model_dst, True)
-    if rel_drw.exists():
-        safe_move(rel_drw, rev_drw_dst, overwrite=False, log_file=log_file)
-        set_readonly(rev_drw_dst, True)
+    created_rev_model = False
+    created_rev_drw = False
 
-    # promote INREV copy to REL with base code name
-    inrev_model = Path(doc.file_inrev_path) if doc.file_inrev_path else model_path(inrev, inrev_tag(doc.code, cur_rev), doc.doc_type)
-    inrev_drw = Path(doc.file_inrev_drw_path) if doc.file_inrev_drw_path else drw_path(inrev, inrev_tag(doc.code, cur_rev))
+    try:
+        # REL -> REV: copia (non move) per ridurre i lock WinError 32 su rename.
+        if rel_model.exists():
+            safe_copy(rel_model, rev_model_dst, overwrite=False, log_file=log_file)
+            set_readonly(rev_model_dst, True)
+            created_rev_model = True
+        if rel_drw.exists():
+            safe_copy(rel_drw, rev_drw_dst, overwrite=False, log_file=log_file)
+            set_readonly(rev_drw_dst, True)
+            created_rev_drw = True
 
-    if inrev_model.exists():
-        dst = model_path(rel, doc.code, doc.doc_type)
-        safe_move(inrev_model, dst, overwrite=True, log_file=log_file)
-        set_readonly(dst, True)
-        doc.file_rel_path = str(dst)
-    else:
-        doc.file_rel_path = doc.file_rel_path or ""
+        # promote INREV copy to REL with base code name
+        inrev_model = Path(doc.file_inrev_path) if doc.file_inrev_path else model_path(inrev, inrev_tag(doc.code, cur_rev), doc.doc_type)
+        inrev_drw = Path(doc.file_inrev_drw_path) if doc.file_inrev_drw_path else drw_path(inrev, inrev_tag(doc.code, cur_rev))
 
-    if inrev_drw.exists():
-        dst = drw_path(rel, doc.code)
-        safe_move(inrev_drw, dst, overwrite=True, log_file=log_file)
-        set_readonly(dst, True)
-        doc.file_rel_drw_path = str(dst)
-    else:
-        doc.file_rel_drw_path = doc.file_rel_drw_path or ""
+        if inrev_model.exists():
+            dst = model_path(current, doc.code, doc.doc_type)
+            try:
+                safe_copy_replace(inrev_model, dst, log_file=log_file)
+            except Exception as e:
+                raise PermissionError(f"{e} | source={inrev_model} -> dest={dst}") from e
+            set_readonly(dst, True)
+            if not safe_delete(inrev_model, strict=False, log_file=log_file):
+                _append_log(log_file, f"WF WARN APPROVE_INREV | impossibile eliminare IN_REV model: {inrev_model}")
+            doc.file_rel_path = str(dst)
+            doc.file_wip_path = str(dst)
+        else:
+            doc.file_rel_path = doc.file_rel_path or ""
+            doc.file_wip_path = doc.file_wip_path or doc.file_rel_path
+
+        if inrev_drw.exists():
+            dst = drw_path(current, doc.code)
+            try:
+                safe_copy_replace(inrev_drw, dst, log_file=log_file)
+            except Exception as e:
+                raise PermissionError(f"{e} | source={inrev_drw} -> dest={dst}") from e
+            set_readonly(dst, True)
+            if not safe_delete(inrev_drw, strict=False, log_file=log_file):
+                _append_log(log_file, f"WF WARN APPROVE_INREV | impossibile eliminare IN_REV drw: {inrev_drw}")
+            doc.file_rel_drw_path = str(dst)
+            doc.file_wip_drw_path = str(dst)
+        else:
+            doc.file_rel_drw_path = doc.file_rel_drw_path or ""
+            doc.file_wip_drw_path = doc.file_wip_drw_path or doc.file_rel_drw_path
+    except Exception as e:
+        # rollback best-effort delle copie REV create in questa esecuzione
+        if created_rev_model:
+            safe_delete(rev_model_dst, strict=False, log_file=log_file)
+        if created_rev_drw:
+            safe_delete(rev_drw_dst, strict=False, log_file=log_file)
+        _append_log(log_file, f"WF FAIL APPROVE_INREV | promote failed: {e}")
+        return doc, WorkflowResult(False, f"Impossibile approvare revisione: {e}")
 
     # increment revision
     doc.revision = cur_rev + 1
